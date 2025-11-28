@@ -24,13 +24,11 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
   final AudioStorageService _audioService = AudioStorageService();
   List<AudioSong> _songs = [];
   bool _isLoading = true;
-  Set<String> _favoriteSongs = {}; // Track favorite songs
 
   @override
   void initState() {
     super.initState();
     _loadSongs();
-    _loadFavorites();
   }
 
   Future<void> _loadSongs() async {
@@ -46,32 +44,50 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
     } else {
       // For other folders, scan device audio
       final scannedSongs = await _audioService.scanDeviceAudio(widget.folderName);
+
+      // Get existing songs from storage
+      final existingSongs = await _audioService.getAllSongs();
+
+      // Merge scanned songs with existing ones, preserving favorite status
+      List<AudioSong> mergedSongs = [];
+      for (var scannedSong in scannedSongs) {
+        // Check if this song already exists (by file path)
+        final existingSong = existingSongs.firstWhere(
+          (song) => song.filePath == scannedSong.filePath,
+          orElse: () => scannedSong,
+        );
+
+        // If song exists, use the existing one (with favorite status preserved)
+        // If not, save the new scanned song to storage
+        if (existingSongs.any((s) => s.filePath == scannedSong.filePath)) {
+          mergedSongs.add(existingSong);
+        } else {
+          // Save new scanned song to storage
+          await _audioService.saveSong(scannedSong);
+          mergedSongs.add(scannedSong);
+        }
+      }
+
       setState(() {
-        _songs = scannedSongs;
+        _songs = mergedSongs;
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _loadFavorites() async {
-    // Load favorite songs from SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    final favorites = prefs.getStringList('favorite_songs') ?? [];
-    setState(() {
-      _favoriteSongs = favorites.toSet();
-    });
-  }
+  Future<void> _toggleFavorite(AudioSong song) async {
+    // Toggle favorite in storage
+    await _audioService.toggleFavorite(song.id);
 
-  Future<void> _toggleFavorite(String songId) async {
-    final prefs = await SharedPreferences.getInstance();
+    // Update local state without reloading/rescanning
     setState(() {
-      if (_favoriteSongs.contains(songId)) {
-        _favoriteSongs.remove(songId);
-      } else {
-        _favoriteSongs.add(songId);
+      final index = _songs.indexWhere((s) => s.id == song.id);
+      if (index != -1) {
+        _songs[index] = _songs[index].copyWith(
+          isFavorite: !_songs[index].isFavorite,
+        );
       }
     });
-    await prefs.setStringList('favorite_songs', _favoriteSongs.toList());
   }
 
   @override
@@ -193,7 +209,6 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
   }
 
   Widget _buildSongCard(AudioSong song) {
-    final isFavorite = _favoriteSongs.contains(song.id);
     return GestureDetector(
       onTap: () {
         Get.to(() => LyricsScreen(song: song));
@@ -249,11 +264,11 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
             // Favorite button
             GestureDetector(
               onTap: () {
-                _toggleFavorite(song.id);
+                _toggleFavorite(song);
               },
               child: Icon(
-                isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: isFavorite ? Colors.white : Colors.white,
+                song.isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: song.isFavorite ? Colors.white : Colors.white,
                 size: 24.sp,
               ),
             ),

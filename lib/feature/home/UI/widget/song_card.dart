@@ -83,21 +83,23 @@ class SongCard extends StatelessWidget {
               text: duration,
               fontSize: 12,
             ),
-            SizedBox(width: 15.w),
 
-            // Favorite icon
-            GestureDetector(
-              onTap: onFavoriteToggle,
-              child: Icon(
-                isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: isFavorite ? R.color.white : R.color.white,
-                size: 16.sp,
+            // Show favorite icon only if onFavoriteToggle is provided
+            if (onFavoriteToggle != null) ...[
+              SizedBox(width: 15.w),
+              // Favorite icon
+              GestureDetector(
+                onTap: onFavoriteToggle,
+                child: Icon(
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: isFavorite ? R.color.white : R.color.white,
+                  size: 16.sp,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
   }
 }
-

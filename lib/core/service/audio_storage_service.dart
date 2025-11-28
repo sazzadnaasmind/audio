@@ -284,6 +284,38 @@ class AudioStorageService {
       return [];
     }
   }
+
+  // Toggle favorite status for a song
+  Future<void> toggleFavorite(String songId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final songs = await getAllSongs();
+
+    final index = songs.indexWhere((s) => s.id == songId);
+    if (index != -1) {
+      songs[index] = songs[index].copyWith(isFavorite: !songs[index].isFavorite);
+
+      final jsonList = songs.map((s) => s.toJson()).toList();
+      await prefs.setString(_storageKey, jsonEncode(jsonList));
+    }
+  }
+
+  // Get all favorite songs
+  Future<List<AudioSong>> getFavoriteSongs() async {
+    final allSongs = await getAllSongs();
+    return allSongs.where((song) => song.isFavorite).toList();
+  }
+
+  // Update a song (useful for updating lyrics or other fields)
+  Future<void> updateSong(AudioSong updatedSong) async {
+    final prefs = await SharedPreferences.getInstance();
+    final songs = await getAllSongs();
+
+    final index = songs.indexWhere((s) => s.id == updatedSong.id);
+    if (index != -1) {
+      songs[index] = updatedSong;
+
+      final jsonList = songs.map((s) => s.toJson()).toList();
+      await prefs.setString(_storageKey, jsonEncode(jsonList));
+    }
+  }
 }
-
-

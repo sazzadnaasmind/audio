@@ -8,6 +8,7 @@ import '../../../../app/resourse.dart';
 import '../../../../core/model/audio_song.dart';
 import '../../../../core/model/lyric_line.dart';
 import '../../../../core/service/lyrics_service.dart';
+import '../../../../core/service/recent_songs_service.dart';
 
 class LyricsScreen extends StatefulWidget {
   final AudioSong? song;
@@ -52,9 +53,17 @@ class _LyricsScreenState extends State<LyricsScreen> {
     super.initState();
     _loadLyrics();
     _initAudioPlayer();
+    _addToRecentSongs();
+  }
+
+  Future<void> _addToRecentSongs() async {
+    if (widget.song != null) {
+      await RecentSongsService.addRecentSong(widget.song!);
+    }
   }
 
   Future<void> _loadLyrics() async {
+    if (!mounted) return;
     setState(() {
       _isLoadingLyrics = true;
     });
@@ -76,9 +85,11 @@ class _LyricsScreenState extends State<LyricsScreen> {
     } catch (e) {
       print('Error loading lyrics: $e');
     } finally {
-      setState(() {
-        _isLoadingLyrics = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingLyrics = false;
+        });
+      }
     }
   }
 
@@ -131,7 +142,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
   }
 
   void _updateCurrentLyric() {
-    if (_lyrics.isEmpty) return;
+    if (_lyrics.isEmpty || !mounted) return;
 
     int currentSeconds = _position.inSeconds;
     int newIndex = -1;
@@ -480,4 +491,3 @@ class _LyricsScreenState extends State<LyricsScreen> {
     );
   }
 }
-

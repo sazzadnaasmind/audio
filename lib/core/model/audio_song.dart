@@ -9,6 +9,7 @@ class AudioSong {
   final String duration;
   final DateTime addedDate;
   final List<LyricLine>? lyrics;
+  final bool isFavorite;
 
   AudioSong({
     required this.id,
@@ -19,6 +20,7 @@ class AudioSong {
     required this.duration,
     required this.addedDate,
     this.lyrics,
+    this.isFavorite = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -31,6 +33,7 @@ class AudioSong {
       'duration': duration,
       'addedDate': addedDate.toIso8601String(),
       'lyrics': lyrics?.map((line) => line.toJson()).toList(),
+      'isFavorite': isFavorite,
     };
   }
 
@@ -46,6 +49,32 @@ class AudioSong {
       lyrics: json['lyrics'] != null
           ? (json['lyrics'] as List).map((line) => LyricLine.fromJson(line)).toList()
           : null,
+      isFavorite: json['isFavorite'] ?? false,
+    );
+  }
+
+  // Create a copy with updated fields
+  AudioSong copyWith({
+    String? id,
+    String? title,
+    String? artist,
+    String? filePath,
+    String? folderName,
+    String? duration,
+    DateTime? addedDate,
+    List<LyricLine>? lyrics,
+    bool? isFavorite,
+  }) {
+    return AudioSong(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      filePath: filePath ?? this.filePath,
+      folderName: folderName ?? this.folderName,
+      duration: duration ?? this.duration,
+      addedDate: addedDate ?? this.addedDate,
+      lyrics: lyrics ?? this.lyrics,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 }

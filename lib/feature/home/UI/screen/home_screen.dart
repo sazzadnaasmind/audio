@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:volum/app/vtestsmall.dart';
 import 'dart:ui';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -12,70 +11,81 @@ import 'package:volum/feature/online/UI/screen/online_screen.dart' hide OnlineSc
 import 'package:volum/feature/favourite/UI/screen/favourite_screen.dart';
 
 import '../../../../app/resourse.dart';
+import '../../../../core/model/audio_song.dart';
+import '../../../../core/service/recent_songs_service.dart';
 import '../../../lyrics/UI/screen/lyrics_screen.dart';
-import '../../../lyrics/UI/screen/lyrics_screen_new.dart';
-import '../../../online/UI/widget/empty_online.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int selectedTabIndex = 0;
+  List<AudioSong> _recentSongs = [];
+  List<AudioSong> _filteredSongs = [];
+  bool _isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> songs = [
-    {
-      'title': 'How You Like That',
-      'artist': 'Blackpink',
-      'duration': '3:01',
-      'image': 'assets/images/song1.jpg',
-      'isFavorite': true,
-    },
-    {
-      'title': 'As It Was',
-      'artist': 'Harry Styles',
-      'duration': '2:07',
-      'image': 'assets/images/song2.jpg',
-      'isFavorite': true,
-    },
-    {
-      'title': 'Story of My Life',
-      'artist': 'One Direction',
-      'duration': '4:05',
-      'image': 'assets/images/song3.jpg',
-      'isFavorite': false,
-    },
-    {
-      'title': 'Not Like Us',
-      'artist': 'Kendrick Lamar',
-      'duration': '4:34',
-      'image': 'assets/images/song4.jpg',
-      'isFavorite': false,
-    },
-    {
-      'title': 'DAMN',
-      'artist': 'Kendrick Lamar',
-      'duration': '2:57',
-      'image': 'assets/images/song5.jpg',
-      'isFavorite': true,
-    },
-    {
-      'title': 'Jailer-Hukum Lyrical',
-      'artist': 'Gemini Tv',
-      'duration': '3:01',
-      'image': 'assets/images/song6.jpg',
-      'isFavorite': false,
-    },
-    {
-      'title': 'Jailer-Hukum Lyrical',
-      'artist': 'Gemini Tv',
-      'duration': '3:01',
-      'image': 'assets/images/song7.jpg',
-      'isFavorite': false,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadRecentSongs();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadRecentSongs();
+    }
+  }
+
+  Future<void> _loadRecentSongs() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final songs = await RecentSongsService.getRecentSongs();
+      if (mounted) {
+        setState(() {
+          _recentSongs = songs;
+          _filteredSongs = songs;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading recent songs: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _filterSongs(String query) {
+    final filtered = _recentSongs.where((song) {
+      final titleLower = song.title.toLowerCase();
+      final artistLower = song.artist.toLowerCase();
+      final queryLower = query.toLowerCase();
+      return titleLower.contains(queryLower) || artistLower.contains(queryLower);
+    }).toList();
+
+    setState(() {
+      _filteredSongs = filtered;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,10 +103,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        child:
-        Stack(
+        child: Stack(
           children: [
-            // Blurred gradient overlay layer - no visible border
             Positioned(
               top: -166.h,
               left: 38.w,
@@ -119,20 +127,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // Apply blur to entire background
             BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 115.2, sigmaY: 115.2),
               child: Container(
                 color: Colors.transparent,
               ),
             ),
-
-            // Main content
             SafeArea(
               child: Column(
                 children: [
-                  // Tab bar
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                     child: Row(
@@ -181,22 +184,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-
-                  // Content based on selected tab
                   Expanded(
                     child: IndexedStack(
                       index: selectedTabIndex,
                       children: [
-                        // All Songs tab content
                         _buildAllSongsContent(),
-
-                        // Storage tab content
                         StorageScreen(),
-
-                        // Online tab content
                         FavouriteScreen(),
-
-                        // Favourite tab content
                         FavouriteScreen(),
                       ],
                     ),
@@ -213,13 +207,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildAllSongsContent() {
     return Column(
       children: [
-        // Search bar
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
           child: Container(
             width: 350.w,
             height: 52.h,
-            padding: EdgeInsets.all(16.w),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(99.r),
@@ -239,42 +232,106 @@ class _HomeScreenState extends State<HomeScreen> {
                     BlendMode.srcIn,
                   ),
                 ),
-                SizedBox(width: 6.w),
-                VTextSmall(
-                  text: 'Search by song',
-                  fontWeight: FontWeight.w400,
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    cursorColor: Color(0xFF644FF0),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w400,
+                      decoration: TextDecoration.none,
+                      decorationThickness: 0,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search by song',
+                      hintStyle: TextStyle(
+                        color: Color(0xFF696C8D),
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: (value) {
+                      _filterSongs(value);
+                    },
+                  ),
                 ),
+                if (_searchController.text.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      _searchController.clear();
+                      _filterSongs('');
+                    },
+                    child: Icon(
+                      Icons.clear,
+                      color: Colors.white.withValues(alpha: 0.5),
+                      size: 20.sp,
+                    ),
+                  ),
               ],
             ),
           ),
         ),
-
         SizedBox(height: 10.h),
-
-        // Song list
         Expanded(
-          child: ListView.builder(
+          child: _isLoading
+              ? Center(
+            child: CircularProgressIndicator(
+              color: Colors.white,
+            ),
+          )
+              : _filteredSongs.isEmpty
+              ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _searchController.text.isEmpty
+                      ? Icons.music_note
+                      : Icons.search_off,
+                  size: 80.sp,
+                  color: Colors.white.withValues(alpha: 0.5),
+                ),
+                SizedBox(height: 20.h),
+                VTextSmall(
+                  text: _searchController.text.isEmpty
+                      ? 'No recent songs'
+                      : 'No songs found',
+                  fontWeight: FontWeight.w500,
+                ),
+                SizedBox(height: 10.h),
+                VTextSmall(
+                  text: _searchController.text.isEmpty
+                      ? 'Play a song to see it here'
+                      : 'Try searching with different keywords',
+                  fontWeight: FontWeight.w400,
+                ),
+              ],
+            ),
+          )
+              : ListView.builder(
             padding: EdgeInsets.symmetric(horizontal: 20.w),
-            itemCount: songs.length,
+            itemCount: _filteredSongs.length,
             itemBuilder: (context, index) {
-              final song = songs[index];
+              final song = _filteredSongs[index];
               return SongCard(
-                title: song['title'],
-                artist: song['artist'],
-                duration: song['duration'],
-                image: song['image'],
-                isFavorite: song['isFavorite'],
+                title: song.title,
+                artist: song.artist,
+                duration: song.duration,
+                image: song.filePath,
+                isFavorite: false,
                 onTap: () {
-                  // Handle song tap - play song
-                  print('Play song: ${song['title']}');
-                  Get.to(LyricsScreen());
-                  // Get.to(EmptyOnline());
+                  Get.to(() => LyricsScreen(song: song));
                 },
-                onFavoriteToggle: () {
-                  setState(() {
-                    songs[index]['isFavorite'] = !song['isFavorite'];
-                  });
-                },
+                onFavoriteToggle: null,
               );
             },
           ),

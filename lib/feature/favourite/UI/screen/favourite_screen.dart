@@ -5,7 +5,10 @@ import 'dart:ui';
 
 import '../../../../app/resourse.dart';
 import '../../../../app/vtestsmall.dart';
+import '../../../../core/model/audio_song.dart';
+import '../../../../core/service/audio_storage_service.dart';
 import '../../../home/UI/widget/song_card.dart';
+import '../../../lyrics/UI/screen/lyrics_screen.dart';
 
 class FavouriteScreen extends StatefulWidget {
   const FavouriteScreen({super.key});
@@ -14,62 +17,86 @@ class FavouriteScreen extends StatefulWidget {
   State<FavouriteScreen> createState() => _FavouriteScreenState();
 }
 
-class _FavouriteScreenState extends State<FavouriteScreen> {
+class _FavouriteScreenState extends State<FavouriteScreen>
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+  final AudioStorageService _storageService = AudioStorageService();
+  List<AudioSong> _favoriteSongs = [];
+  bool _isLoading = true;
 
-  final List<Map<String, dynamic>> songs = [
-    {
-      'title': 'How You Like That',
-      'artist': 'Blackpink',
-      'duration': '3:01',
-      'image': 'assets/images/song1.jpg',
-      'isFavorite': true,
-    },
-    {
-      'title': 'As It Was',
-      'artist': 'Harry Styles',
-      'duration': '2:07',
-      'image': 'assets/images/song2.jpg',
-      'isFavorite': true,
-    },
-    {
-      'title': 'Story of My Life',
-      'artist': 'One Direction',
-      'duration': '4:05',
-      'image': 'assets/images/song3.jpg',
-      'isFavorite': false,
-    },
-    {
-      'title': 'Not Like Us',
-      'artist': 'Kendrick Lamar',
-      'duration': '4:34',
-      'image': 'assets/images/song4.jpg',
-      'isFavorite': false,
-    },
-    {
-      'title': 'DAMN',
-      'artist': 'Kendrick Lamar',
-      'duration': '2:57',
-      'image': 'assets/images/song5.jpg',
-      'isFavorite': true,
-    },
-    {
-      'title': 'Jailer-Hukum Lyrical',
-      'artist': 'Gemini Tv',
-      'duration': '3:01',
-      'image': 'assets/images/song6.jpg',
-      'isFavorite': false,
-    },
-    {
-      'title': 'Jailer-Hukum Lyrical',
-      'artist': 'Gemini Tv',
-      'duration': '3:01',
-      'image': 'assets/images/song7.jpg',
-      'isFavorite': false,
-    },
-  ];
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadFavoriteSongs();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Reload when app comes back to foreground
+      _loadFavoriteSongs();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload data whenever the screen becomes visible
+    _loadFavoriteSongs();
+  }
+
+  Future<void> _loadFavoriteSongs() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final songs = await _storageService.getFavoriteSongs();
+      setState(() {
+        _favoriteSongs = songs;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading favorite songs: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite(AudioSong song) async {
+    // Toggle favorite in storage
+    await _storageService.toggleFavorite(song.id);
+
+    // Update local state without reloading
+    setState(() {
+      final index = _favoriteSongs.indexWhere((s) => s.id == song.id);
+      if (index != -1) {
+        // If toggling to unfavorite, remove from list
+        if (_favoriteSongs[index].isFavorite) {
+          _favoriteSongs.removeAt(index);
+        } else {
+          // Update the song state
+          _favoriteSongs[index] = _favoriteSongs[index].copyWith(
+            isFavorite: !_favoriteSongs[index].isFavorite,
+          );
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -117,7 +144,6 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                 color: Colors.transparent,
               ),
             ),
-
 
             _buildAllSongsContent(),
           ],
@@ -169,32 +195,62 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
 
         // Song list
         Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
-            itemCount: songs.length,
-            itemBuilder: (context, index) {
-              final song = songs[index];
-              return SongCard(
-                title: song['title'],
-                artist: song['artist'],
-                duration: song['duration'],
-                image: song['image'],
-                isFavorite: song['isFavorite'],
-                onTap: () {
-                  // Handle song tap - play song
-                  print('Play song: ${song['title']}');
-                },
-                onFavoriteToggle: () {
-                  setState(() {
-                    songs[index]['isFavorite'] = !song['isFavorite'];
-                  });
-                },
-              );
-            },
-          ),
+          child: _isLoading
+              ? Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                  ),
+                )
+              : _favoriteSongs.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.favorite_border,
+                            size: 80.sp,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                          SizedBox(height: 20.h),
+                          VTextSmall(
+                            text: 'No favorite songs yet',
+                            fontWeight: FontWeight.w500,
+                          ),
+                          SizedBox(height: 10.h),
+                          VTextSmall(
+                            text: 'Add songs to favorites to see them here',
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      itemCount: _favoriteSongs.length,
+                      itemBuilder: (context, index) {
+                        final song = _favoriteSongs[index];
+                        return SongCard(
+                          title: song.title,
+                          artist: song.artist,
+                          duration: song.duration,
+                          image: song.filePath,
+                          isFavorite: song.isFavorite,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LyricsScreen(song: song),
+                              ),
+                            );
+                          },
+                          onFavoriteToggle: () {
+                            _toggleFavorite(song);
+                          },
+                        );
+                      },
+                    ),
         ),
       ],
     );
   }
 }
-

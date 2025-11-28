@@ -45,5 +45,18 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Permissions for file access and audio playback -->
+	<key>NSAppleMusicUsageDescription</key>
+	<string>This app needs access to your music library to play audio files.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your photo library to select audio files.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app needs access to save audio files to your library.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs access to your microphone for audio recording.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>

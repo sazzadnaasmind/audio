@@ -5,8 +5,10 @@ import 'dart:ui';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:volum/feature/storage/UI/widget/folder_card.dart';
 import 'package:volum/app/vtext.dart';
-
+import 'package:get/get.dart';
 import '../../../../app/resourse.dart';
+import '../../../../core/service/audio_storage_service.dart';
+import 'folder_songs_screen.dart';
 
 class StorageScreen extends StatefulWidget {
   const StorageScreen({super.key});
@@ -16,14 +18,86 @@ class StorageScreen extends StatefulWidget {
 }
 
 class _StorageScreenState extends State<StorageScreen> {
-  final List<Map<String, String>> folders = [
-    {'name': 'Music', 'songs': '25 Songs'},
-    {'name': 'SnapTuebe Audio', 'songs': '15 Songs'},
-    {'name': 'Whatsapp Audio', 'songs': '1 Songs'},
-    {'name': 'Whatsapp Audio', 'songs': '1 Songs'},
-    {'name': 'Whatsapp Audio', 'songs': '1 Songs'},
-    {'name': 'Whatsapp Audio', 'songs': '1 Songs'},
+  final AudioStorageService _audioService = AudioStorageService();
+
+  List<Map<String, String>> folders = [
+    {'name': 'Music', 'songs': '0 Songs'},
+    {'name': 'SnapTuebe', 'songs': '0 Songs'},
+    {'name': 'Whatsapp', 'songs': '0 Songs'},
+    {'name': 'Telegram', 'songs': '0 Songs'},
+    {'name': 'Downloads', 'songs': '0 Songs'},
+    {'name': 'Recorded', 'songs': '0 Songs'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _updateAllFolderCounts();
+  }
+
+  Future<void> _updateAllFolderCounts() async {
+    // Update Music folder count (uploaded songs)
+    final musicSongs = await _audioService.getSongsByFolder('Music');
+
+    // Scan other folders from device storage
+    final snapTubeSongs = await _audioService.scanDeviceAudio('SnapTuebe');
+    final whatsappSongs = await _audioService.scanDeviceAudio('Whatsapp');
+    final telegramSongs = await _audioService.scanDeviceAudio('Telegram');
+    final downloadsSongs = await _audioService.scanDeviceAudio('Downloads');
+    final recordedSongs = await _audioService.scanDeviceAudio('Recorded');
+
+    setState(() {
+      folders = [
+        {'name': 'Music', 'songs': '${musicSongs.length} Songs'},
+        {'name': 'SnapTuebe', 'songs': '${snapTubeSongs.length} Songs'},
+        {'name': 'Whatsapp', 'songs': '${whatsappSongs.length} Songs'},
+        {'name': 'Telegram', 'songs': '${telegramSongs.length} Songs'},
+        {'name': 'Downloads', 'songs': '${downloadsSongs.length} Songs'},
+        {'name': 'Recorded', 'songs': '${recordedSongs.length} Songs'},
+      ];
+    });
+  }
+
+  Future<void> _uploadAudioFile() async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF644FF0),
+        ),
+      ),
+    );
+
+    final song = await _audioService.uploadAudioFile();
+
+    // Close loading dialog
+    Navigator.pop(context);
+
+    if (song != null) {
+      // Update all folder counts
+      await _updateAllFolderCounts();
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Audio uploaded successfully to Music folder'),
+          backgroundColor: Color(0xFF644FF0),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload audio. Please check permissions.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +167,7 @@ class _StorageScreenState extends State<StorageScreen> {
                         color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(99.r),
                         border: Border.all(
-                          color: R.color.slateBlue.withOpacity(0.5),
+                          color: R.color.slateBlue.withValues(alpha: 0.5),
                           width: 1,
                         ),
                       ),
@@ -141,8 +215,13 @@ class _StorageScreenState extends State<StorageScreen> {
                           folderName: folder['name']!,
                           songCount: folder['songs']!,
                           onTap: () {
-                            // Handle folder tap - open folder
-                            print('Open folder: ${folder['name']}');
+                            // Navigate to folder songs screen
+                            Get.to(() => FolderSongsScreen(
+                              folderName: folder['name']!,
+                            ))?.then((_) {
+                              // Refresh all folder counts when coming back
+                              _updateAllFolderCounts();
+                            });
                           },
                         );
                       },
@@ -155,10 +234,7 @@ class _StorageScreenState extends State<StorageScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Handle FAB tap
-          print('FAB pressed');
-        },
+        onPressed: _uploadAudioFile,
         backgroundColor: Color(0xFF644FF0),
         child: Icon(
           Icons.add,

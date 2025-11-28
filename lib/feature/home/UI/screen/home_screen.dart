@@ -13,6 +13,7 @@ import 'package:volum/feature/favourite/UI/screen/favourite_screen.dart';
 
 import '../../../../app/resourse.dart';
 import '../../../lyrics/UI/screen/lyrics_screen.dart';
+import '../../../lyrics/UI/screen/lyrics_screen_new.dart';
 import '../../../online/UI/widget/empty_online.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -267,6 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Handle song tap - play song
                   print('Play song: ${song['title']}');
                   Get.to(LyricsScreen());
+                  // Get.to(EmptyOnline());
                 },
                 onFavoriteToggle: () {
                   setState(() {

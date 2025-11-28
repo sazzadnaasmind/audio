@@ -236,10 +236,15 @@ class _FavouriteScreenState extends State<FavouriteScreen>
                           image: song.filePath,
                           isFavorite: song.isFavorite,
                           onTap: () {
+                            // Pass the entire playlist with current index
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => LyricsScreen(song: song),
+                                builder: (context) => LyricsScreen(
+                                  song: song,
+                                  playlist: _favoriteSongs,
+                                  initialIndex: index,
+                                ),
                               ),
                             );
                           },

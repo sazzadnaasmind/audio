@@ -329,7 +329,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 image: song.filePath,
                 isFavorite: false,
                 onTap: () {
-                  Get.to(() => LyricsScreen(song: song));
+                  // Pass the entire filtered playlist with current index
+                  Get.to(() => LyricsScreen(
+                    song: song,
+                    playlist: _filteredSongs,
+                    initialIndex: index,
+                  ));
                 },
                 onFavoriteToggle: null,
               );

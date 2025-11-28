@@ -9,7 +9,7 @@ import '../../../../app/resourse.dart';
 import '../../../../core/model/audio_song.dart';
 import '../../../../core/service/audio_storage_service.dart';
 import '../../../lyrics/UI/screen/lyrics_screen.dart';
-import '../../../lyrics/UI/screen/lyrics_screen_new.dart';
+
 
 class FolderSongsScreen extends StatefulWidget {
   final String folderName;
@@ -211,7 +211,13 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
   Widget _buildSongCard(AudioSong song) {
     return GestureDetector(
       onTap: () {
-        Get.to(() => LyricsScreen(song: song));
+        // Pass the entire playlist with current index
+        final currentIndex = _songs.indexOf(song);
+        Get.to(() => LyricsScreen(
+          song: song,
+          playlist: _songs,
+          initialIndex: currentIndex,
+        ));
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),

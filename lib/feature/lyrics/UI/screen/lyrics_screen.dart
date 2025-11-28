@@ -12,8 +12,15 @@ import '../../../../core/service/recent_songs_service.dart';
 
 class LyricsScreen extends StatefulWidget {
   final AudioSong? song;
+  final List<AudioSong>? playlist;
+  final int? initialIndex;
 
-  const LyricsScreen({super.key, this.song});
+  const LyricsScreen({
+    super.key,
+    this.song,
+    this.playlist,
+    this.initialIndex,
+  });
 
   @override
   State<LyricsScreen> createState() => _LyricsScreenState();
@@ -31,6 +38,16 @@ class _LyricsScreenState extends State<LyricsScreen> {
   List<String> _availableLanguages = ['English'];
   List<LyricLine> _lyrics = [];
   bool _isLoadingLyrics = true;
+
+  // Playlist management
+  List<AudioSong> _playlist = [];
+  int _currentSongIndex = 0;
+  AudioSong? _currentSong;
+
+  // Playback modes
+  bool _isRepeatMode = false;
+  bool _isShuffleMode = false;
+  List<int> _shuffledIndices = [];
 
   final List<String> _languages = [
     'English',
@@ -51,14 +68,30 @@ class _LyricsScreenState extends State<LyricsScreen> {
   @override
   void initState() {
     super.initState();
+    _initializePlaylist();
     _loadLyrics();
     _initAudioPlayer();
     _addToRecentSongs();
   }
 
+  void _initializePlaylist() {
+    if (widget.playlist != null && widget.playlist!.isNotEmpty) {
+      _playlist = List.from(widget.playlist!);
+      _currentSongIndex = widget.initialIndex ?? 0;
+      _currentSong = _playlist[_currentSongIndex];
+    } else if (widget.song != null) {
+      _playlist = [widget.song!];
+      _currentSongIndex = 0;
+      _currentSong = widget.song;
+    }
+
+    // Initialize shuffled indices
+    _shuffledIndices = List.generate(_playlist.length, (index) => index);
+  }
+
   Future<void> _addToRecentSongs() async {
-    if (widget.song != null) {
-      await RecentSongsService.addRecentSong(widget.song!);
+    if (_currentSong != null) {
+      await RecentSongsService.addRecentSong(_currentSong!);
     }
   }
 
@@ -69,15 +102,15 @@ class _LyricsScreenState extends State<LyricsScreen> {
     });
 
     try {
-      if (widget.song?.lyrics != null && widget.song!.lyrics!.isNotEmpty) {
-        _lyrics = widget.song!.lyrics!;
-      } else if (widget.song != null) {
-        final fetchedLyrics = await LyricsService.fetchLyrics(widget.song!);
+      if (_currentSong?.lyrics != null && _currentSong!.lyrics!.isNotEmpty) {
+        _lyrics = _currentSong!.lyrics!;
+      } else if (_currentSong != null) {
+        final fetchedLyrics = await LyricsService.fetchLyrics(_currentSong!);
         if (fetchedLyrics != null && fetchedLyrics.isNotEmpty) {
           _lyrics = fetchedLyrics;
 
           // Save fetched lyrics to local .lrc file for future use
-          LyricsService.saveLyricsToFile(widget.song!.filePath, fetchedLyrics);
+          LyricsService.saveLyricsToFile(_currentSong!.filePath, fetchedLyrics);
         }
       }
 
@@ -113,8 +146,8 @@ class _LyricsScreenState extends State<LyricsScreen> {
   }
 
   void _initAudioPlayer() {
-    if (widget.song != null) {
-      _audioPlayer.setSourceDeviceFile(widget.song!.filePath);
+    if (_currentSong != null) {
+      _audioPlayer.setSourceDeviceFile(_currentSong!.filePath);
 
       _audioPlayer.onDurationChanged.listen((duration) {
         if (mounted) {
@@ -137,8 +170,114 @@ class _LyricsScreenState extends State<LyricsScreen> {
         }
       });
 
+      _audioPlayer.onPlayerComplete.listen((event) {
+        if (mounted) {
+          _onSongComplete();
+        }
+      });
+
       _audioPlayer.resume();
     }
+  }
+
+  void _onSongComplete() {
+    if (_isRepeatMode) {
+      // Repeat current song
+      _audioPlayer.seek(Duration.zero);
+      _audioPlayer.resume();
+    } else {
+      // Play next song
+      _playNext();
+    }
+  }
+
+  void _toggleRepeat() {
+    setState(() {
+      _isRepeatMode = !_isRepeatMode;
+    });
+  }
+
+  void _toggleShuffle() {
+    setState(() {
+      _isShuffleMode = !_isShuffleMode;
+      if (_isShuffleMode) {
+        // Create shuffled indices
+        _shuffledIndices = List.generate(_playlist.length, (index) => index);
+        _shuffledIndices.shuffle();
+
+        // Make sure current song is first in shuffle
+        int currentIndexInShuffle = _shuffledIndices.indexOf(_currentSongIndex);
+        if (currentIndexInShuffle != 0) {
+          _shuffledIndices.removeAt(currentIndexInShuffle);
+          _shuffledIndices.insert(0, _currentSongIndex);
+        }
+      }
+    });
+  }
+
+  void _playPrevious() async {
+    if (_playlist.isEmpty) return;
+
+    int previousIndex;
+    if (_isShuffleMode) {
+      int currentShufflePosition = _shuffledIndices.indexOf(_currentSongIndex);
+      if (currentShufflePosition > 0) {
+        previousIndex = _shuffledIndices[currentShufflePosition - 1];
+      } else {
+        // Loop to end
+        previousIndex = _shuffledIndices.last;
+      }
+    } else {
+      if (_currentSongIndex > 0) {
+        previousIndex = _currentSongIndex - 1;
+      } else {
+        // Loop to end
+        previousIndex = _playlist.length - 1;
+      }
+    }
+
+    await _changeSong(previousIndex);
+  }
+
+  void _playNext() async {
+    if (_playlist.isEmpty) return;
+
+    int nextIndex;
+    if (_isShuffleMode) {
+      int currentShufflePosition = _shuffledIndices.indexOf(_currentSongIndex);
+      if (currentShufflePosition < _shuffledIndices.length - 1) {
+        nextIndex = _shuffledIndices[currentShufflePosition + 1];
+      } else {
+        // Loop to beginning
+        nextIndex = _shuffledIndices.first;
+      }
+    } else {
+      if (_currentSongIndex < _playlist.length - 1) {
+        nextIndex = _currentSongIndex + 1;
+      } else {
+        // Loop to beginning
+        nextIndex = 0;
+      }
+    }
+
+    await _changeSong(nextIndex);
+  }
+
+  Future<void> _changeSong(int newIndex) async {
+    await _audioPlayer.stop();
+
+    setState(() {
+      _currentSongIndex = newIndex;
+      _currentSong = _playlist[_currentSongIndex];
+      _currentLyricIndex = -1;
+      _position = Duration.zero;
+      _duration = Duration.zero;
+    });
+
+    await _addToRecentSongs();
+    await _loadLyrics();
+    await _audioPlayer.setSourceDeviceFile(_currentSong!.filePath);
+    await _audioPlayer.resume();
   }
 
   void _updateCurrentLyric() {
@@ -199,9 +338,9 @@ class _LyricsScreenState extends State<LyricsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final songTitle = widget.song?.title ?? 'How You Like That';
-    final songArtist = widget.song?.artist ?? 'Blackpink';
-    final songDuration = _duration != Duration.zero ? _formatDuration(_duration) : (widget.song?.duration ?? '3:01');
+    final songTitle = _currentSong?.title ?? 'How You Like That';
+    final songArtist = _currentSong?.artist ?? 'Blackpink';
+    final songDuration = _duration != Duration.zero ? _formatDuration(_duration) : (_currentSong?.duration ?? '3:01');
 
     return Scaffold(
       body: Container(
@@ -449,8 +588,19 @@ class _LyricsScreenState extends State<LyricsScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    IconButton(icon: Icon(Icons.repeat, color: Colors.white), iconSize: 28.sp, onPressed: () {}),
-                    IconButton(icon: Icon(Icons.skip_previous, color: Colors.white), iconSize: 36.sp, onPressed: () {}),
+                    IconButton(
+                      icon: Icon(
+                        Icons.repeat,
+                        color: _isRepeatMode ? Color(0xFF644FF0) : Colors.white,
+                      ),
+                      iconSize: 28.sp,
+                      onPressed: _toggleRepeat,
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.skip_previous, color: Colors.white),
+                      iconSize: 36.sp,
+                      onPressed: _playlist.length > 1 ? _playPrevious : null,
+                    ),
                     Container(
                       width: 70.w,
                       height: 70.h,
@@ -461,8 +611,19 @@ class _LyricsScreenState extends State<LyricsScreen> {
                         onPressed: _togglePlayPause,
                       ),
                     ),
-                    IconButton(icon: Icon(Icons.skip_next, color: Colors.white), iconSize: 36.sp, onPressed: () {}),
-                    IconButton(icon: Icon(Icons.shuffle, color: Colors.white), iconSize: 28.sp, onPressed: () {}),
+                    IconButton(
+                      icon: Icon(Icons.skip_next, color: Colors.white),
+                      iconSize: 36.sp,
+                      onPressed: _playlist.length > 1 ? _playNext : null,
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.shuffle,
+                        color: _isShuffleMode ? Color(0xFF644FF0) : Colors.white,
+                      ),
+                      iconSize: 28.sp,
+                      onPressed: _playlist.length > 1 ? _toggleShuffle : null,
+                    ),
                   ],
                 ),
               ),
@@ -491,3 +652,4 @@ class _LyricsScreenState extends State<LyricsScreen> {
     );
   }
 }
+

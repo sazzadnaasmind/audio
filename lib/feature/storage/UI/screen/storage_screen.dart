@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:volum/app/vtestsmall.dart';
 import 'dart:ui';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:volum/feature/storage/UI/widget/folder_card.dart';
 import 'package:volum/app/vtext.dart';
 import 'package:get/get.dart';
 import '../../../../app/resourse.dart';
 import '../../../../core/service/audio_storage_service.dart';
 import 'folder_songs_screen.dart';
-
 class StorageScreen extends StatefulWidget {
   const StorageScreen({super.key});
 
@@ -72,27 +69,22 @@ class _StorageScreenState extends State<StorageScreen> {
 
     final song = await _audioService.uploadAudioFile();
 
-    // Close loading dialog
     Navigator.pop(context);
 
     if (song != null) {
-      // Update all folder counts
       await _updateAllFolderCounts();
-
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Audio uploaded successfully to Music folder'),
-          backgroundColor: Color(0xFF644FF0),
+          backgroundColor: R.color.periwinkle,
           duration: Duration(seconds: 2),
         ),
       );
     } else {
-      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to upload audio. Please check permissions.'),
-          backgroundColor: Colors.red,
+          backgroundColor: R.color.red,
           duration: Duration(seconds: 2),
         ),
       );
@@ -109,10 +101,7 @@ class _StorageScreenState extends State<StorageScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0A0C35),
-              Color(0xFF410D5F),
-            ],
+            colors: [R.color.darkNavy, R.color.plumPurple],
           ),
         ),
         child: Stack(
@@ -131,8 +120,8 @@ class _StorageScreenState extends State<StorageScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Color(0xFF644FF0),
-                        Color(0xFF644FF0).withValues(alpha: 0.45),
+                        R.color.periwinkle,
+                        R.color.periwinkle.withValues(alpha: 0.45),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(69.r),
@@ -140,34 +129,24 @@ class _StorageScreenState extends State<StorageScreen> {
                 ),
               ),
             ),
-
-            // Apply blur to entire background
             BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 115.2, sigmaY: 115.2),
               child: Container(
                 color: Colors.transparent,
               ),
             ),
-
-            // Main content
             SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   SizedBox(height: 20.h),
-
-                  // "6 Folder Found" text
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20.w),
                     child: VText(
                       text: '${folders.length} Folder Found',
                     ),
                   ),
-
                   SizedBox(height: 20.h),
-
-                  // Folder list
                   Expanded(
                     child: ListView.builder(
                       padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -178,11 +157,9 @@ class _StorageScreenState extends State<StorageScreen> {
                           folderName: folder['name']!,
                           songCount: folder['songs']!,
                           onTap: () {
-                            // Navigate to folder songs screen
                             Get.to(() => FolderSongsScreen(
                               folderName: folder['name']!,
                             ))?.then((_) {
-                              // Refresh all folder counts when coming back
                               _updateAllFolderCounts();
                             });
                           },
@@ -198,10 +175,10 @@ class _StorageScreenState extends State<StorageScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _uploadAudioFile,
-        backgroundColor: Color(0xFF644FF0),
+        backgroundColor: R.color.periwinkle,
         child: Icon(
           Icons.add,
-          color: Colors.white,
+          color: R.color.white,
           size: 28.sp,
         ),
       ),

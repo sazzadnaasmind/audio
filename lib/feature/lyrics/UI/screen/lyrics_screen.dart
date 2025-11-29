@@ -110,7 +110,6 @@ class _LyricsScreenState extends State<LyricsScreen> {
         await _audioPlayer.seek(Duration.zero);
         await _audioPlayer.resume();
       } catch (e) {
-        print('Error repeating song: $e');
         // If seek fails, reload the source
         if (_currentSong != null) {
           await _audioPlayer.setSourceDeviceFile(_currentSong!.filePath);
@@ -123,14 +122,12 @@ class _LyricsScreenState extends State<LyricsScreen> {
         await _audioPlayer.seek(Duration.zero);
         await _audioPlayer.resume();
       } catch (e) {
-        print('Error looping song: $e');
         if (_currentSong != null) {
           await _audioPlayer.setSourceDeviceFile(_currentSong!.filePath);
           await _audioPlayer.resume();
         }
       }
     } else {
-      // Play next song in playlist
       _playNext();
     }
   }
@@ -138,10 +135,8 @@ class _LyricsScreenState extends State<LyricsScreen> {
   void _toggleRepeat() {
     setState(() {
       if (_isRepeatMode) {
-        // If already in repeat mode, turn it off
         _isRepeatMode = false;
       } else {
-        // Turn repeat on and turn shuffle off
         _isRepeatMode = true;
         _isShuffleMode = false;
       }
@@ -151,19 +146,14 @@ class _LyricsScreenState extends State<LyricsScreen> {
   void _toggleShuffle() {
     setState(() {
       if (_isShuffleMode) {
-        // If already in shuffle mode, turn it off
         _isShuffleMode = false;
-        // Reset to normal order
         _shuffledIndices = List.generate(_playlist.length, (index) => index);
       } else {
-        // Turn shuffle on and turn repeat off
         _isShuffleMode = true;
         _isRepeatMode = false;
-        // Create shuffled indices
         _shuffledIndices = List.generate(_playlist.length, (index) => index);
         _shuffledIndices.shuffle();
 
-        // Make sure current song is first in shuffle
         int currentIndexInShuffle = _shuffledIndices.indexOf(_currentSongIndex);
         if (currentIndexInShuffle != 0) {
           _shuffledIndices.removeAt(currentIndexInShuffle);
@@ -182,14 +172,12 @@ class _LyricsScreenState extends State<LyricsScreen> {
       if (currentShufflePosition > 0) {
         previousIndex = _shuffledIndices[currentShufflePosition - 1];
       } else {
-        // Loop to end
         previousIndex = _shuffledIndices.last;
       }
     } else {
       if (_currentSongIndex > 0) {
         previousIndex = _currentSongIndex - 1;
       } else {
-        // Loop to end
         previousIndex = _playlist.length - 1;
       }
     }
@@ -206,21 +194,18 @@ class _LyricsScreenState extends State<LyricsScreen> {
       if (currentShufflePosition < _shuffledIndices.length - 1) {
         nextIndex = _shuffledIndices[currentShufflePosition + 1];
       } else {
-        // Loop to beginning
         nextIndex = _shuffledIndices.first;
       }
     } else {
       if (_currentSongIndex < _playlist.length - 1) {
         nextIndex = _currentSongIndex + 1;
       } else {
-        // Loop to beginning
         nextIndex = 0;
       }
     }
 
     await _changeSong(nextIndex);
   }
-
   Future<void> _changeSong(int newIndex) async {
     await _audioPlayer.stop();
 
@@ -272,10 +257,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1E1B4B),
-              Color(0xFF4C1D95),
-            ],
+            colors: [R.color.darkNavy, R.color.plumPurple],
           ),
         ),
         child: Stack(
@@ -293,8 +275,8 @@ class _LyricsScreenState extends State<LyricsScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Color(0xFF644FF0),
-                        Color(0xFF644FF0).withValues(alpha: 0.45),
+                        R.color.periwinkle,
+                        R.color.periwinkle.withValues(alpha: 0.45),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(69.r),
@@ -328,10 +310,10 @@ class _LyricsScreenState extends State<LyricsScreen> {
                             height: 32.h,
                             padding: EdgeInsets.only(top: 6.h, right: 15.w, bottom: 6.h, left: 5.w),
                             decoration: BoxDecoration(
-                              color: Color(0xFFD9D9D9).withValues(alpha: 0.2),
+                              color: R.color.lightGray.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(16.r),
                             ),
-                            child: Icon(Icons.close, color: Colors.white, size: 20.sp),
+                            child: Icon(Icons.close, color: R.color.white, size: 20.sp),
                           ),
                         ),
                       ],
@@ -345,11 +327,11 @@ class _LyricsScreenState extends State<LyricsScreen> {
                       height: 82.h,
                       padding: EdgeInsets.all(16.w),
                       decoration: BoxDecoration(
-                        color: Color(0xFF000000).withValues(alpha: 0.1),
+                        color: R.color.black.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16.r),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFF3064BF).withValues(alpha: 0.2),
+                            color: R.color.royalBlue.withValues(alpha: 0.2),
                             offset: Offset(0, 4),
                             blurRadius: 4,
                             spreadRadius: 0,
@@ -359,9 +341,21 @@ class _LyricsScreenState extends State<LyricsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12.r),
-                            child: Image.asset('assets/images/image.png', width: 50.w, height: 50.h, fit: BoxFit.cover),
+                          Container(
+                            width: 50.w,
+                            height: 50.h,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10.r),
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10.r),
+                              child: Icon(
+                                Icons.music_note,
+                                color: Colors.white.withValues(alpha: 0.5),
+                                size: 30.sp,
+                              ),
+                            ),
                           ),
                           SizedBox(width: 12.w),
                           Expanded(
@@ -397,35 +391,35 @@ class _LyricsScreenState extends State<LyricsScreen> {
                     IconButton(
                       icon: Icon(
                         Icons.repeat,
-                        color: _isRepeatMode ? Color(0xFF644FF0) : Colors.white,
+                        color: _isRepeatMode ?R.color.periwinkle : R.color.white,
                       ),
                       iconSize: 28.sp,
                       onPressed: _toggleRepeat,
                     ),
                     IconButton(
-                      icon: Icon(Icons.skip_previous, color: Colors.white),
+                      icon: Icon(Icons.skip_previous, color:R.color.white),
                       iconSize: 36.sp,
                       onPressed: _playlist.length > 1 ? _playPrevious : null,
                     ),
                     Container(
                       width: 70.w,
                       height: 70.h,
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.3), shape: BoxShape.circle),
+                      decoration: BoxDecoration(color: R.color.white.withValues(alpha: 0.3), shape: BoxShape.circle),
                       child: IconButton(
-                        icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white),
+                        icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: R.color.white),
                         iconSize: 40.sp,
                         onPressed: _togglePlayPause,
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.skip_next, color: Colors.white),
+                      icon: Icon(Icons.skip_next, color: R.color.white),
                       iconSize: 36.sp,
                       onPressed: _playlist.length > 1 ? _playNext : null,
                     ),
                     IconButton(
                       icon: Icon(
                         Icons.shuffle,
-                        color: _isShuffleMode ? Color(0xFF644FF0) : Colors.white,
+                        color: _isShuffleMode ? R.color.periwinkle :R.color.white,
                       ),
                       iconSize: 28.sp,
                       onPressed: _playlist.length > 1 ? _toggleShuffle : null,

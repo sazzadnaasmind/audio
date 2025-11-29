@@ -1,5 +1,4 @@
-import 'lyric_line.dart';
-
+// import 'lyric_line.dart';
 class AudioSong {
   final String id;
   final String title;
@@ -8,7 +7,7 @@ class AudioSong {
   final String folderName;
   final String duration;
   final DateTime addedDate;
-  final List<LyricLine>? lyrics;
+  // final List<LyricLine>? lyrics;
   final bool isFavorite;
 
   AudioSong({
@@ -19,7 +18,7 @@ class AudioSong {
     required this.folderName,
     required this.duration,
     required this.addedDate,
-    this.lyrics,
+    // this.lyrics,
     this.isFavorite = false,
   });
 
@@ -32,7 +31,7 @@ class AudioSong {
       'folderName': folderName,
       'duration': duration,
       'addedDate': addedDate.toIso8601String(),
-      'lyrics': lyrics?.map((line) => line.toJson()).toList(),
+      // 'lyrics': lyrics?.map((line) => line.toJson()).toList(),
       'isFavorite': isFavorite,
     };
   }
@@ -46,9 +45,9 @@ class AudioSong {
       folderName: json['folderName'],
       duration: json['duration'],
       addedDate: DateTime.parse(json['addedDate']),
-      lyrics: json['lyrics'] != null
-          ? (json['lyrics'] as List).map((line) => LyricLine.fromJson(line)).toList()
-          : null,
+      // lyrics: json['lyrics'] != null
+      //     ? (json['lyrics'] as List).map((line) => LyricLine.fromJson(line)).toList()
+      //     : null,
       isFavorite: json['isFavorite'] ?? false,
     );
   }
@@ -62,7 +61,7 @@ class AudioSong {
     String? folderName,
     String? duration,
     DateTime? addedDate,
-    List<LyricLine>? lyrics,
+    // List<LyricLine>? lyrics,
     bool? isFavorite,
   }) {
     return AudioSong(
@@ -73,7 +72,7 @@ class AudioSong {
       folderName: folderName ?? this.folderName,
       duration: duration ?? this.duration,
       addedDate: addedDate ?? this.addedDate,
-      lyrics: lyrics ?? this.lyrics,
+      // lyrics: lyrics ?? this.lyrics,
       isFavorite: isFavorite ?? this.isFavorite,
     );
   }

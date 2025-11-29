@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:volum/app/vtext.dart';
 import 'package:volum/app/vtestsmall.dart';
 import '../../../../app/resourse.dart';
-
 class SongCard extends StatelessWidget {
   final String title;
   final String artist;
@@ -14,7 +13,7 @@ class SongCard extends StatelessWidget {
   final VoidCallback? onFavoriteToggle;
 
   const SongCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.artist,
     required this.duration,
@@ -22,7 +21,7 @@ class SongCard extends StatelessWidget {
     required this.isFavorite,
     this.onTap,
     this.onFavoriteToggle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,11 +31,11 @@ class SongCard extends StatelessWidget {
         margin: EdgeInsets.only(bottom: 15.h),
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: Color(0xFF000000).withValues(alpha: 0.1),
+          color: R.color.black.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16.r),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFF3064BF).withValues(alpha: 0.2),
+              color: R.color.royalBlue.withValues(alpha: 0.2),
               offset: Offset(0, 4),
               blurRadius: 4,
               spreadRadius: 0,
@@ -63,9 +62,7 @@ class SongCard extends StatelessWidget {
                 ),
               ),
             ),
-
             SizedBox(width: 15.w),
-
             // Song info
             Expanded(
               child: Column(
@@ -77,17 +74,12 @@ class SongCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Duration
             VText(
               text: duration,
               fontSize: 12,
             ),
-
-            // Show favorite icon only if onFavoriteToggle is provided
             if (onFavoriteToggle != null) ...[
               SizedBox(width: 15.w),
-              // Favorite icon
               GestureDetector(
                 onTap: onFavoriteToggle,
                 child: Icon(

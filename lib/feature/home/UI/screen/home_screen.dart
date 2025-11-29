@@ -8,13 +8,14 @@ import 'package:volum/feature/home/UI/widget/tab_item.dart';
 import 'package:volum/feature/home/UI/widget/song_card.dart';
 import 'package:volum/feature/storage/UI/screen/storage_screen.dart';
 import 'package:volum/feature/favourite/UI/screen/favourite_screen.dart';
-
 import '../../../../app/resourse.dart';
 import '../../../../core/model/audio_song.dart';
 import '../../../../core/service/recent_songs_service.dart';
 import '../../../lyrics/UI/screen/lyrics_screen.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -64,7 +65,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       }
     } catch (e) {
-      print('Error loading recent songs: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -78,7 +78,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final titleLower = song.title.toLowerCase();
       final artistLower = song.artist.toLowerCase();
       final queryLower = query.toLowerCase();
-      return titleLower.contains(queryLower) || artistLower.contains(queryLower);
+      return titleLower.contains(queryLower) ||
+          artistLower.contains(queryLower);
     }).toList();
 
     setState(() {
@@ -96,10 +97,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0A0C35),
-              Color(0xFF410D5F),
-            ],
+            colors: [R.color.darkNavy, R.color.plumPurple],
           ),
         ),
         child: Stack(
@@ -117,8 +115,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Color(0xFF644FF0),
-                        Color(0xFF644FF0).withValues(alpha: 0.45),
+                        R.color.periwinkle,
+                        R.color.periwinkle.withValues(alpha: 0.45),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(69.r),
@@ -128,15 +126,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 115.2, sigmaY: 115.2),
-              child: Container(
-                color: Colors.transparent,
-              ),
+              child: Container(color: Colors.transparent),
             ),
             SafeArea(
               child: Column(
                 children: [
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: 10.h,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -216,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   width: 20.w,
                   height: 20.h,
                   colorFilter: ColorFilter.mode(
-                    Color(0xFF696C8D),
+                    R.color.slateBlue,
                     BlendMode.srcIn,
                   ),
                 ),
@@ -224,9 +223,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    cursorColor: Color(0xFF644FF0),
+                    cursorColor: R.color.periwinkle,
                     style: TextStyle(
-                      color: Colors.white,
+                      color: R.color.white,
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w400,
                       decoration: TextDecoration.none,
@@ -235,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     decoration: InputDecoration(
                       hintText: 'Search by song',
                       hintStyle: TextStyle(
-                        color: Color(0xFF696C8D),
+                        color: R.color.slateBlue,
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w400,
                       ),
@@ -271,66 +270,68 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         SizedBox(height: 10.h),
         Expanded(
           child: _isLoading
+              ? Center(child: CircularProgressIndicator(color: R.color.white))
+              : _filteredSongs.isEmpty
               ? Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _searchController.text.isEmpty
+                            ? Icons.music_note
+                            : Icons.search_off,
+                        size: 80.sp,
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
+                      SizedBox(height: 20.h),
+                      VTextSmall(
+                        text: _searchController.text.isEmpty
+                            ? 'No recent songs'
+                            : 'No songs found',
+                        fontWeight: FontWeight.w500,
+                      ),
+                      SizedBox(height: 10.h),
+                      VTextSmall(
+                        text: _searchController.text.isEmpty
+                            ? 'Play a song to see it here'
+                            : 'Try searching with different keywords',
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ],
                   ),
                 )
-              : _filteredSongs.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _searchController.text.isEmpty
-                                ? Icons.music_note
-                                : Icons.search_off,
-                            size: 80.sp,
-                            color: Colors.white.withValues(alpha: 0.5),
-                          ),
-                          SizedBox(height: 20.h),
-                          VTextSmall(
-                            text: _searchController.text.isEmpty
-                                ? 'No recent songs'
-                                : 'No songs found',
-                            fontWeight: FontWeight.w500,
-                          ),
-                          SizedBox(height: 10.h),
-                          VTextSmall(
-                            text: _searchController.text.isEmpty
-                                ? 'Play a song to see it here'
-                                : 'Try searching with different keywords',
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: 20.w),
-                      itemCount: _filteredSongs.length,
-                      itemBuilder: (context, index) {
-                        final song = _filteredSongs[index];
-                        // Find the index of this song in the full playlist
-                        final fullPlaylistIndex = _recentSongs.indexWhere((s) => s.id == song.id);
+              : ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  itemCount: _filteredSongs.length,
+                  itemBuilder: (context, index) {
+                    final song = _filteredSongs[index];
+                    // Find the index of this song in the full playlist
+                    final fullPlaylistIndex = _recentSongs.indexWhere(
+                      (s) => s.id == song.id,
+                    );
 
-                        return SongCard(
-                          title: song.title,
-                          artist: song.artist,
-                          duration: song.duration,
-                          image: song.filePath,
-                          isFavorite: false,
-                          onTap: () {
-                            // Pass the entire full playlist with correct index
-                            Get.to(() => LyricsScreen(
-                              song: song,
-                              playlist: _recentSongs,
-                              initialIndex: fullPlaylistIndex >= 0 ? fullPlaylistIndex : index,
-                            ));
-                          },
-                          onFavoriteToggle: null,
+                    return SongCard(
+                      title: song.title,
+                      artist: song.artist,
+                      duration: song.duration,
+                      image: song.filePath,
+                      isFavorite: false,
+                      onTap: () {
+                        // Pass the entire full playlist with correct index
+                        Get.to(
+                          () => LyricsScreen(
+                            song: song,
+                            playlist: _recentSongs,
+                            initialIndex: fullPlaylistIndex >= 0
+                                ? fullPlaylistIndex
+                                : index,
+                          ),
                         );
                       },
-                    ),
+                      onFavoriteToggle: null,
+                    );
+                  },
+                ),
         ),
       ],
     );

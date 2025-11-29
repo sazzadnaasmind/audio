@@ -4,16 +4,12 @@ import 'package:get/get.dart';
 import 'dart:ui';
 import 'package:volum/app/vtext.dart';
 import 'package:volum/app/vtestsmall.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../app/resourse.dart';
 import '../../../../core/model/audio_song.dart';
 import '../../../../core/service/audio_storage_service.dart';
 import '../../../lyrics/UI/screen/lyrics_screen.dart';
-
-
 class FolderSongsScreen extends StatefulWidget {
   final String folderName;
-
   const FolderSongsScreen({super.key, required this.folderName});
 
   @override
@@ -34,7 +30,7 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
   Future<void> _loadSongs() async {
     setState(() => _isLoading = true);
 
-    // For Music folder, load uploaded songs
+
     if (widget.folderName == 'Music') {
       final uploadedSongs = await _audioService.getSongsByFolder('Music');
       setState(() {
@@ -42,27 +38,19 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
         _isLoading = false;
       });
     } else {
-      // For other folders, scan device audio
       final scannedSongs = await _audioService.scanDeviceAudio(widget.folderName);
-
-      // Get existing songs from storage
       final existingSongs = await _audioService.getAllSongs();
 
-      // Merge scanned songs with existing ones, preserving favorite status
       List<AudioSong> mergedSongs = [];
       for (var scannedSong in scannedSongs) {
-        // Check if this song already exists (by file path)
         final existingSong = existingSongs.firstWhere(
           (song) => song.filePath == scannedSong.filePath,
           orElse: () => scannedSong,
         );
 
-        // If song exists, use the existing one (with favorite status preserved)
-        // If not, save the new scanned song to storage
         if (existingSongs.any((s) => s.filePath == scannedSong.filePath)) {
           mergedSongs.add(existingSong);
         } else {
-          // Save new scanned song to storage
           await _audioService.saveSong(scannedSong);
           mergedSongs.add(scannedSong);
         }
@@ -76,10 +64,8 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
   }
 
   Future<void> _toggleFavorite(AudioSong song) async {
-    // Toggle favorite in storage
     await _audioService.toggleFavorite(song.id);
 
-    // Update local state without reloading/rescanning
     setState(() {
       final index = _songs.indexWhere((s) => s.id == song.id);
       if (index != -1) {
@@ -100,10 +86,7 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0A0C35),
-              Color(0xFF410D5F),
-            ],
+            colors: [R.color.darkNavy, R.color.plumPurple],
           ),
         ),
         child: Stack(
@@ -122,8 +105,8 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Color(0xFF644FF0),
-                        Color(0xFF644FF0).withValues(alpha: 0.45),
+                        R.color.periwinkle,
+                        R.color.periwinkle.withValues(alpha: 0.45),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(69.r),
@@ -146,7 +129,7 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
                     child: Row(
                       children: [
                         IconButton(
-                          icon: Icon(Icons.arrow_back, color: Colors.white),
+                          icon: Icon(Icons.arrow_back, color: R.color.white),
                           onPressed: () => Navigator.pop(context),
                         ),
                         SizedBox(width: 8.w),
@@ -180,7 +163,7 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
                     child: _isLoading
                         ? Center(
                             child: CircularProgressIndicator(
-                              color: Color(0xFF644FF0),
+                              color: R.color.periwinkle,
                             ),
                           )
                         : _songs.isEmpty
@@ -233,12 +216,12 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
               width: 50.w,
               height: 50.h,
               decoration: BoxDecoration(
-                color: Color(0xFF644FF0).withValues(alpha: 0.3),
+                color: R.color.periwinkle.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Icon(
                 Icons.music_note,
-                color: Colors.white,
+                color: R.color.white,
                 size: 30.sp,
               ),
             ),
@@ -275,7 +258,7 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
               },
               child: Icon(
                 song.isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: song.isFavorite ? Colors.white : Colors.white,
+                color: song.isFavorite ? R.color.white : R.color.white,
                 size: 24.sp,
               ),
             ),

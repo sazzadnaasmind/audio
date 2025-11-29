@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -8,29 +9,22 @@ import '../model/audio_song.dart';
 
 class AudioStorageService {
   static const String _storageKey = 'audio_songs';
-
-  // Request storage permissions
   Future<bool> requestPermissions() async {
     if (Platform.isAndroid) {
-      // Request multiple permissions for Android 13+
       Map<Permission, PermissionStatus> statuses = await [
         Permission.storage,
         Permission.manageExternalStorage,
         Permission.audio,
       ].request();
-
-      // Check if any permission is granted
       return statuses.values.any((status) => status.isGranted);
     }
     return true;
   }
 
-  // Upload audio file
   Future<AudioSong?> uploadAudioFile() async {
     try {
       final hasPermission = await requestPermissions();
       if (!hasPermission) {
-        print('Permission denied');
         return null;
       }
 
@@ -43,7 +37,6 @@ class AudioStorageService {
         final file = File(result.files.single.path!);
         final fileName = result.files.single.name;
 
-        // Copy file to app directory
         final appDir = await getApplicationDocumentsDirectory();
         final musicDir = Directory('${appDir.path}/Music');
         if (!await musicDir.exists()) {
@@ -53,13 +46,11 @@ class AudioStorageService {
         final newPath = '${musicDir.path}/$fileName';
         await file.copy(newPath);
 
-        // Extract title and artist from filename
         String title = fileName
             .replaceAll(RegExp(r'\.(mp3|m4a|wav|aac|opus|flac)$', caseSensitive: false), '')
             .trim();
         String artist = 'Unknown Artist';
 
-        // Try to extract artist from filename if it contains " - "
         if (title.contains(' - ')) {
           final parts = title.split(' - ');
           if (parts.length >= 2) {
@@ -68,18 +59,17 @@ class AudioStorageService {
           }
         }
 
-        // Calculate accurate duration based on file size and bitrate
         String duration = '3:00';
         try {
           final fileSize = await file.length();
-          // Formula: (fileSize in bytes * 8) / (bitrate in kbps * 1000)
-          // Using 128 kbps as average bitrate for MP3
           final estimatedSeconds = (fileSize * 8) ~/ (128 * 1000);
           final minutes = estimatedSeconds ~/ 60;
           final seconds = estimatedSeconds % 60;
           duration = '$minutes:${seconds.toString().padLeft(2, '0')}';
         } catch (e) {
-          print('Error calculating duration: $e');
+          if (kDebugMode) {
+            print('Error calculating duration: $e');
+          }
         }
 
         // Create AudioSong object
@@ -93,12 +83,13 @@ class AudioStorageService {
           addedDate: DateTime.now(),
         );
 
-        // Save to local storage
         await saveSong(song);
         return song;
       }
     } catch (e) {
-      print('Error uploading file: $e');
+      if (kDebugMode) {
+        print('Error uploading audio file: $e');
+      }
     }
     return null;
   }
@@ -154,7 +145,6 @@ class AudioStorageService {
     try {
       final hasPermission = await requestPermissions();
       if (!hasPermission) {
-        print('Permission denied for scanning');
         return [];
       }
 
@@ -216,8 +206,6 @@ class AudioStorageService {
 
           try {
             if (await directory.exists()) {
-              print('✓ Scanning folder: $targetPath');
-
               // List files with error handling
               try {
                 final files = await directory.list(recursive: true).toList();
@@ -246,13 +234,14 @@ class AudioStorageService {
                       try {
                         final fileStats = await file.stat();
                         final fileSizeInBytes = fileStats.size;
-                        // More accurate estimation: Average bitrate ~128kbps
                         final estimatedSeconds = (fileSizeInBytes * 8) ~/ (128 * 1000);
                         final minutes = estimatedSeconds ~/ 60;
                         final seconds = estimatedSeconds % 60;
-                        duration = '${minutes}:${seconds.toString().padLeft(2, '0')}';
+                        duration = '$minutes:${seconds.toString().padLeft(2, '0')}';
                       } catch (e) {
-                        print('Error getting file stats: $e');
+                        if (kDebugMode) {
+                          print('Error getting file stats: $e');
+                        }
                       }
 
                       songs.add(AudioSong(
@@ -267,23 +256,139 @@ class AudioStorageService {
                     }
                   }
                 }
-                print('  Found $fileCount audio files in $targetPath');
+                if (kDebugMode) {
+                  print('  Found $fileCount audio files in $targetPath');
+                }
               } catch (e) {
-                print('  Error reading files in $targetPath: $e');
+                if (kDebugMode) {
+                  print('  Error reading files in $targetPath: $e');
+                }
               }
             } else {
-              print('✗ Folder not found: $targetPath');
+              if (kDebugMode) {
+                print('✗ Folder not found: $targetPath');
+              }
             }
           } catch (e) {
-            print('✗ Error accessing $targetPath: $e');
+            if (kDebugMode) {
+              print('✗ Error accessing $targetPath: $e');
+            }
+          }
+        }
+      } else if (Platform.isIOS) {
+        // iOS implementation
+        try {
+          final appDocDir = await getApplicationDocumentsDirectory();
+          List<String> targetPaths = [];
+
+          switch (folderName.toLowerCase()) {
+            case 'music':
+              // Check app's document directory and iOS Music library
+              targetPaths = [
+                '${appDocDir.path}/Music',
+                appDocDir.path,
+              ];
+              break;
+            case 'downloads':
+              targetPaths = [
+                '${appDocDir.path}/Downloads',
+                '${appDocDir.path}/Inbox',
+              ];
+              break;
+            case 'recorded':
+              targetPaths = [
+                '${appDocDir.path}/Recordings',
+                '${appDocDir.path}/Voice Memos',
+              ];
+              break;
+            case 'whatsapp':
+            case 'telegram':
+            case 'snaptuebe':
+              targetPaths = [
+                '${appDocDir.path}/$folderName',
+              ];
+              break;
+            default:
+              targetPaths = [appDocDir.path];
+          }
+
+          // Scan all target paths
+          for (String targetPath in targetPaths) {
+            final directory = Directory(targetPath);
+
+            try {
+              if (await directory.exists()) {
+                try {
+                  final files = await directory.list(recursive: true).toList();
+                  int fileCount = 0;
+                  for (var file in files) {
+                    if (file is File) {
+                      final ext = file.path.split('.').last.toLowerCase();
+                      if (['mp3', 'm4a', 'wav', 'aac', 'opus', 'flac', 'ogg', 'wma', 'amr', '3gp', 'oga', 'caf'].contains(ext)) {
+                        fileCount++;
+                        final fileName = file.path.split('/').last;
+                        String title = fileName.replaceAll('.$ext', '');
+                        String artist = 'Unknown Artist';
+
+                        // Try to extract artist from filename
+                        if (title.contains(' - ')) {
+                          final parts = title.split(' - ');
+                          if (parts.length >= 2) {
+                            artist = parts[0].trim();
+                            title = parts[1].trim();
+                          }
+                        }
+
+                        // Get actual duration
+                        String duration = '3:00';
+                        try {
+                          final fileStats = await file.stat();
+                          final fileSizeInBytes = fileStats.size;
+                          final estimatedSeconds = (fileSizeInBytes * 8) ~/ (128 * 1000);
+                          final minutes = estimatedSeconds ~/ 60;
+                          final seconds = estimatedSeconds % 60;
+                          duration = '$minutes:${seconds.toString().padLeft(2, '0')}';
+                        } catch (e) {
+                          if (kDebugMode) {
+                            print('Error getting file stats: $e');
+                          }
+                        }
+
+                        songs.add(AudioSong(
+                          id: file.path.hashCode.toString(),
+                          title: title,
+                          artist: artist,
+                          filePath: file.path,
+                          folderName: folderName,
+                          duration: duration,
+                          addedDate: DateTime.now(),
+                        ));
+                      }
+                    }
+                  }
+                } catch (e) {
+                  if (kDebugMode) {
+                    print('  Error reading files in iOS path $targetPath: $e');
+                  }
+                }
+              } else {}
+            } catch (e) {
+              if (kDebugMode) {
+                print('✗ Error accessing iOS path $targetPath: $e');
+              }
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error getting iOS directories: $e');
           }
         }
       }
-
-      print('Total: Found ${songs.length} songs in $folderName folder');
       return songs;
     } catch (e) {
-      print('Error scanning device: $e');
+      if (kDebugMode) {
+        print('Error scanning device: $e');
+      }
       return [];
     }
   }

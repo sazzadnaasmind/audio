@@ -45,18 +45,134 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
 	<!-- Permissions for file access and audio playback -->
 	<key>NSAppleMusicUsageDescription</key>
 	<string>This app needs access to your music library to play audio files.</string>
+
+	<!-- Photo Library Access (iOS 14+) -->
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs access to your photo library to select audio files.</string>
+	<string>This app needs access to your photo library to select and save audio files.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>This app needs access to save audio files to your library.</string>
+
+	<!-- Microphone Access -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs access to your microphone for audio recording.</string>
+
+	<!-- Media Library Access -->
+	<key>NSMediaLibraryUsageDescription</key>
+	<string>This app needs access to your media library to play and manage audio files.</string>
+
+	<!-- Document Picker and File Access -->
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>This app needs access to your documents folder to manage audio files.</string>
+
+	<!-- File Sharing and Document Access -->
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+
+	<!-- Background Audio Playback -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
+
+	<!-- Audio Session Category -->
+	<key>UIRequiresPersistentWiFi</key>
+	<false/>
+
+	<!-- Support for Files app access -->
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
+
+	<!-- Support for importing audio files -->
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.audio</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Audio File</string>
+			<key>UTTypeIdentifier</key>
+			<string>public.audio</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>mp3</string>
+					<string>m4a</string>
+					<string>wav</string>
+					<string>aac</string>
+					<string>flac</string>
+					<string>ogg</string>
+					<string>opus</string>
+					<string>wma</string>
+					<string>amr</string>
+					<string>3gp</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>audio/mpeg</string>
+					<string>audio/mp4</string>
+					<string>audio/x-m4a</string>
+					<string>audio/wav</string>
+					<string>audio/aac</string>
+					<string>audio/flac</string>
+					<string>audio/ogg</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+
+	<!-- Support for opening audio files -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Audio File</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.audio</string>
+				<string>public.mp3</string>
+				<string>public.mpeg-4-audio</string>
+				<string>public.aac-audio</string>
+				<string>public.wav-audio</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Support for exporting files -->
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+				<string>public.audio</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Audio File</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.example.volum.audio</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>mp3</string>
+					<string>m4a</string>
+					<string>wav</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

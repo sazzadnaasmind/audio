@@ -38,7 +38,6 @@ class RecentSongsService {
       final List<dynamic> jsonList = jsonDecode(jsonString);
       return jsonList.map((json) => AudioSong.fromJson(json)).toList();
     } catch (e) {
-      print('Error loading recent songs: $e');
       return [];
     }
   }

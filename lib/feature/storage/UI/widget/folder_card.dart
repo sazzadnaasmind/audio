@@ -10,11 +10,11 @@ class FolderCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const FolderCard({
-    Key? key,
+    super.key,
     required this.folderName,
     required this.songCount,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,6 @@ class FolderCard extends StatelessWidget {
         margin: EdgeInsets.only(bottom: 12.h),
         child: Row(
           children: [
-            // Folder icon
             SvgPicture.asset(
               'assets/images/Frame.svg',
               width: 48.w,
@@ -34,8 +33,6 @@ class FolderCard extends StatelessWidget {
             ),
 
             SizedBox(width: 12.w),
-
-            // Folder info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

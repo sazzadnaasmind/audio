@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:volum/app/resourse.dart';
-
-
-
 class VTextSmall extends Text {
   VTextSmall({
     super.key,

@@ -10,12 +10,12 @@ class TabItem extends StatelessWidget {
   final VoidCallback onTap;
 
   const TabItem({
-    Key? key,
+    super.key,
     required this.title,
     required this.index,
     required this.selectedIndex,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -71,9 +71,9 @@ class SongCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  VText(text: title),
+                  VText(text: title,overflow: TextOverflow.ellipsis,),
                   SizedBox(height: 4.h),
-                  VTextSmall(text: artist),
+                  VTextSmall(text: artist,overflow: TextOverflow.ellipsis,),
                 ],
               ),
             ),

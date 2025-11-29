@@ -316,7 +316,10 @@ class _FavouriteScreenState extends State<FavouriteScreen>
                                   initialIndex: fullPlaylistIndex >= 0 ? fullPlaylistIndex : index,
                                 ),
                               ),
-                            );
+                            ).then((_) {
+                              // Reload favorite songs when returning from LyricsScreen
+                              _loadFavoriteSongs();
+                            });
                           },
                           onFavoriteToggle: () {
                             _toggleFavorite(song);

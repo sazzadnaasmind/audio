@@ -250,12 +250,13 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
                 children: [
                   VText(
                     text: song.title,
-                    fontSize: 16.sp,
+                    overflow: TextOverflow.ellipsis,
                     fontWeight: FontWeight.w500,
                   ),
                   SizedBox(height: 4.h),
                   VTextSmall(
                     text: song.artist,
+                    overflow: TextOverflow.ellipsis,
                     fontSize: 13.sp,
                   ),
                 ],

@@ -131,15 +131,18 @@ class _LyricsScreenState extends State<LyricsScreen> {
       }
     } else {
       // Play next song in playlist
-      await _playNext();
+      _playNext();
     }
   }
 
   void _toggleRepeat() {
     setState(() {
-      _isRepeatMode = !_isRepeatMode;
-      // If repeat is enabled, disable shuffle
       if (_isRepeatMode) {
+        // If already in repeat mode, turn it off
+        _isRepeatMode = false;
+      } else {
+        // Turn repeat on and turn shuffle off
+        _isRepeatMode = true;
         _isShuffleMode = false;
       }
     });
@@ -147,9 +150,14 @@ class _LyricsScreenState extends State<LyricsScreen> {
 
   void _toggleShuffle() {
     setState(() {
-      _isShuffleMode = !_isShuffleMode;
-      // If shuffle is enabled, disable repeat
       if (_isShuffleMode) {
+        // If already in shuffle mode, turn it off
+        _isShuffleMode = false;
+        // Reset to normal order
+        _shuffledIndices = List.generate(_playlist.length, (index) => index);
+      } else {
+        // Turn shuffle on and turn repeat off
+        _isShuffleMode = true;
         _isRepeatMode = false;
         // Create shuffled indices
         _shuffledIndices = List.generate(_playlist.length, (index) => index);
@@ -161,9 +169,6 @@ class _LyricsScreenState extends State<LyricsScreen> {
           _shuffledIndices.removeAt(currentIndexInShuffle);
           _shuffledIndices.insert(0, _currentSongIndex);
         }
-      } else {
-        // Reset shuffled indices to normal order when shuffle is disabled
-        _shuffledIndices = List.generate(_playlist.length, (index) => index);
       }
     });
   }
@@ -364,9 +369,9 @@ class _LyricsScreenState extends State<LyricsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                VText(text: songTitle),
+                                VText(text: songTitle,overflow: TextOverflow.ellipsis,),
                                 SizedBox(height: 4.h),
-                                VTextSmall(text: songArtist),
+                                VTextSmall(text: songArtist,overflow: TextOverflow.ellipsis,),
                               ],
                             ),
                           ),

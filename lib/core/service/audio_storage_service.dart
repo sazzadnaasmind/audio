@@ -161,20 +161,6 @@ class AudioStorageService {
       List<AudioSong> songs = [];
 
       if (Platform.isAndroid) {
-        // Common Android audio paths
-        final List<String> searchPaths = [
-          '/storage/emulated/0/Music',
-          '/storage/emulated/0/Download',
-          '/storage/emulated/0/Downloads',
-          '/storage/emulated/0/WhatsApp/Media/WhatsApp Audio',
-          '/storage/emulated/0/Telegram/Telegram Audio',
-          '/storage/emulated/0/Snapchat',
-          '/storage/emulated/0/SnapTube',
-          '/storage/emulated/0/Recordings',
-          '/storage/emulated/0/Voice Recorder',
-          '/storage/emulated/0/DCIM/Recordings',
-        ];
-
         List<String> targetPaths = [];
 
         switch (folderName.toLowerCase()) {
@@ -184,18 +170,25 @@ class AudioStorageService {
               '/storage/emulated/0/SnapTube',
               '/storage/emulated/0/Snapchat',
               '/storage/emulated/0/SnapTube/Audio',
+              '/storage/emulated/0/snaptube',
             ];
             break;
           case 'whatsapp':
             targetPaths = [
+              '/storage/emulated/0/Music/WhatsApp',
               '/storage/emulated/0/WhatsApp/Media/WhatsApp Audio',
               '/storage/emulated/0/WhatsApp/Media/WhatsApp Voice Notes',
+              '/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Audio',
+              '/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Voice Notes',
             ];
             break;
           case 'telegram':
             targetPaths = [
+              '/storage/emulated/0/Music/Telegram',
               '/storage/emulated/0/Telegram/Telegram Audio',
               '/storage/emulated/0/Telegram/Audio',
+              '/storage/emulated/0/Telegram',
+              '/storage/emulated/0/Android/data/org.telegram.messenger/files/Telegram/Telegram Audio',
             ];
             break;
           case 'downloads':
@@ -210,6 +203,7 @@ class AudioStorageService {
               '/storage/emulated/0/Voice Recorder',
               '/storage/emulated/0/DCIM/Recordings',
               '/storage/emulated/0/Recorder',
+              '/storage/emulated/0/SoundRecorder',
             ];
             break;
           default:
@@ -222,62 +216,71 @@ class AudioStorageService {
 
           try {
             if (await directory.exists()) {
-              print('Scanning folder: $targetPath');
-              final files = directory.listSync(recursive: true);
+              print('✓ Scanning folder: $targetPath');
 
-              for (var file in files) {
-                if (file is File) {
-                  final ext = file.path.split('.').last.toLowerCase();
-                  if (['mp3', 'm4a', 'wav', 'aac', 'opus', 'flac', 'ogg', 'wma', 'amr', '3gp'].contains(ext)) {
-                    final fileName = file.path.split('/').last;
-                    String title = fileName.replaceAll('.$ext', '');
-                    String artist = 'Unknown Artist';
+              // List files with error handling
+              try {
+                final files = await directory.list(recursive: true).toList();
+                int fileCount = 0;
 
-                    // Try to extract artist from filename
-                    if (title.contains(' - ')) {
-                      final parts = title.split(' - ');
-                      if (parts.length >= 2) {
-                        artist = parts[0].trim();
-                        title = parts[1].trim();
+                for (var file in files) {
+                  if (file is File) {
+                    final ext = file.path.split('.').last.toLowerCase();
+                    if (['mp3', 'm4a', 'wav', 'aac', 'opus', 'flac', 'ogg', 'wma', 'amr', '3gp', 'oga'].contains(ext)) {
+                      fileCount++;
+                      final fileName = file.path.split('/').last;
+                      String title = fileName.replaceAll('.$ext', '');
+                      String artist = 'Unknown Artist';
+
+                      // Try to extract artist from filename
+                      if (title.contains(' - ')) {
+                        final parts = title.split(' - ');
+                        if (parts.length >= 2) {
+                          artist = parts[0].trim();
+                          title = parts[1].trim();
+                        }
                       }
-                    }
 
-                    // Get actual duration if possible
-                    String duration = '3:00';
-                    try {
-                      final fileStats = await file.stat();
-                      final fileSizeInMB = fileStats.size / (1024 * 1024);
-                      // More accurate estimation: Average bitrate ~128kbps
-                      // Formula: (fileSize in bytes * 8) / (bitrate in kbps * 1000)
-                      final fileSizeInBytes = fileStats.size;
-                      final estimatedSeconds = (fileSizeInBytes * 8) ~/ (128 * 1000);
-                      final minutes = estimatedSeconds ~/ 60;
-                      final seconds = estimatedSeconds % 60;
-                      duration = '${minutes}:${seconds.toString().padLeft(2, '0')}';
-                    } catch (e) {
-                      print('Error getting file stats: $e');
-                    }
+                      // Get actual duration if possible
+                      String duration = '3:00';
+                      try {
+                        final fileStats = await file.stat();
+                        final fileSizeInBytes = fileStats.size;
+                        // More accurate estimation: Average bitrate ~128kbps
+                        final estimatedSeconds = (fileSizeInBytes * 8) ~/ (128 * 1000);
+                        final minutes = estimatedSeconds ~/ 60;
+                        final seconds = estimatedSeconds % 60;
+                        duration = '${minutes}:${seconds.toString().padLeft(2, '0')}';
+                      } catch (e) {
+                        print('Error getting file stats: $e');
+                      }
 
-                    songs.add(AudioSong(
-                      id: file.path.hashCode.toString(),
-                      title: title,
-                      artist: artist,
-                      filePath: file.path,
-                      folderName: folderName,
-                      duration: duration,
-                      addedDate: DateTime.now(),
-                    ));
+                      songs.add(AudioSong(
+                        id: file.path.hashCode.toString(),
+                        title: title,
+                        artist: artist,
+                        filePath: file.path,
+                        folderName: folderName,
+                        duration: duration,
+                        addedDate: DateTime.now(),
+                      ));
+                    }
                   }
                 }
+                print('  Found $fileCount audio files in $targetPath');
+              } catch (e) {
+                print('  Error reading files in $targetPath: $e');
               }
+            } else {
+              print('✗ Folder not found: $targetPath');
             }
           } catch (e) {
-            print('Error scanning $targetPath: $e');
+            print('✗ Error accessing $targetPath: $e');
           }
         }
       }
 
-      print('Found ${songs.length} songs in $folderName');
+      print('Total: Found ${songs.length} songs in $folderName folder');
       return songs;
     } catch (e) {
       print('Error scanning device: $e');

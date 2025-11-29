@@ -154,43 +154,6 @@ class _StorageScreenState extends State<StorageScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: 20.h),
-
-                  // Search bar
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w),
-                    child: Container(
-                      width: 350.w,
-                      height: 52.h,
-                      padding: EdgeInsets.all(16.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(99.r),
-                        border: Border.all(
-                          color: R.color.slateBlue.withValues(alpha: 0.5),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          SvgPicture.asset(
-                            'assets/images/search.svg',
-                            width: 20.w,
-                            height: 20.h,
-                            colorFilter: ColorFilter.mode(
-                              Color(0xFF696C8D),
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                          SizedBox(width: 6.w),
-                          VTextSmall(
-                            text: 'Search by Folder',
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
 
                   SizedBox(height: 20.h),
 

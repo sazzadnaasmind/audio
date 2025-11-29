@@ -7,7 +7,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:volum/feature/home/UI/widget/tab_item.dart';
 import 'package:volum/feature/home/UI/widget/song_card.dart';
 import 'package:volum/feature/storage/UI/screen/storage_screen.dart';
-import 'package:volum/feature/online/UI/screen/online_screen.dart' hide OnlineScreen;
 import 'package:volum/feature/favourite/UI/screen/favourite_screen.dart';
 
 import '../../../../app/resourse.dart';
@@ -162,22 +161,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           },
                         ),
                         TabItem(
-                          title: 'Online',
+                          title: 'Favourite',
                           index: 2,
                           selectedIndex: selectedTabIndex,
                           onTap: () {
                             setState(() {
                               selectedTabIndex = 2;
-                            });
-                          },
-                        ),
-                        TabItem(
-                          title: 'Favourite',
-                          index: 3,
-                          selectedIndex: selectedTabIndex,
-                          onTap: () {
-                            setState(() {
-                              selectedTabIndex = 3;
                             });
                           },
                         ),
@@ -190,7 +179,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       children: [
                         _buildAllSongsContent(),
                         StorageScreen(),
-                        FavouriteScreen(),
                         FavouriteScreen(),
                       ],
                     ),
@@ -284,62 +272,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         Expanded(
           child: _isLoading
               ? Center(
-            child: CircularProgressIndicator(
-              color: Colors.white,
-            ),
-          )
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                  ),
+                )
               : _filteredSongs.isEmpty
-              ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  _searchController.text.isEmpty
-                      ? Icons.music_note
-                      : Icons.search_off,
-                  size: 80.sp,
-                  color: Colors.white.withValues(alpha: 0.5),
-                ),
-                SizedBox(height: 20.h),
-                VTextSmall(
-                  text: _searchController.text.isEmpty
-                      ? 'No recent songs'
-                      : 'No songs found',
-                  fontWeight: FontWeight.w500,
-                ),
-                SizedBox(height: 10.h),
-                VTextSmall(
-                  text: _searchController.text.isEmpty
-                      ? 'Play a song to see it here'
-                      : 'Try searching with different keywords',
-                  fontWeight: FontWeight.w400,
-                ),
-              ],
-            ),
-          )
-              : ListView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
-            itemCount: _filteredSongs.length,
-            itemBuilder: (context, index) {
-              final song = _filteredSongs[index];
-              return SongCard(
-                title: song.title,
-                artist: song.artist,
-                duration: song.duration,
-                image: song.filePath,
-                isFavorite: false,
-                onTap: () {
-                  // Pass the entire filtered playlist with current index
-                  Get.to(() => LyricsScreen(
-                    song: song,
-                    playlist: _filteredSongs,
-                    initialIndex: index,
-                  ));
-                },
-                onFavoriteToggle: null,
-              );
-            },
-          ),
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _searchController.text.isEmpty
+                                ? Icons.music_note
+                                : Icons.search_off,
+                            size: 80.sp,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                          SizedBox(height: 20.h),
+                          VTextSmall(
+                            text: _searchController.text.isEmpty
+                                ? 'No recent songs'
+                                : 'No songs found',
+                            fontWeight: FontWeight.w500,
+                          ),
+                          SizedBox(height: 10.h),
+                          VTextSmall(
+                            text: _searchController.text.isEmpty
+                                ? 'Play a song to see it here'
+                                : 'Try searching with different keywords',
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      itemCount: _filteredSongs.length,
+                      itemBuilder: (context, index) {
+                        final song = _filteredSongs[index];
+                        // Find the index of this song in the full playlist
+                        final fullPlaylistIndex = _recentSongs.indexWhere((s) => s.id == song.id);
+
+                        return SongCard(
+                          title: song.title,
+                          artist: song.artist,
+                          duration: song.duration,
+                          image: song.filePath,
+                          isFavorite: false,
+                          onTap: () {
+                            // Pass the entire full playlist with correct index
+                            Get.to(() => LyricsScreen(
+                              song: song,
+                              playlist: _recentSongs,
+                              initialIndex: fullPlaylistIndex >= 0 ? fullPlaylistIndex : index,
+                            ));
+                          },
+                          onFavoriteToggle: null,
+                        );
+                      },
+                    ),
         ),
       ],
     );

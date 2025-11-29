@@ -21,7 +21,9 @@ class _FavouriteScreenState extends State<FavouriteScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final AudioStorageService _storageService = AudioStorageService();
   List<AudioSong> _favoriteSongs = [];
+  List<AudioSong> _filteredSongs = [];
   bool _isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   bool get wantKeepAlive => true;
@@ -35,6 +37,7 @@ class _FavouriteScreenState extends State<FavouriteScreen>
 
   @override
   void dispose() {
+    _searchController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -63,6 +66,7 @@ class _FavouriteScreenState extends State<FavouriteScreen>
       final songs = await _storageService.getFavoriteSongs();
       setState(() {
         _favoriteSongs = songs;
+        _filteredSongs = songs;
         _isLoading = false;
       });
     } catch (e) {
@@ -71,6 +75,19 @@ class _FavouriteScreenState extends State<FavouriteScreen>
         _isLoading = false;
       });
     }
+  }
+
+  void _filterSongs(String query) {
+    final filtered = _favoriteSongs.where((song) {
+      final titleLower = song.title.toLowerCase();
+      final artistLower = song.artist.toLowerCase();
+      final queryLower = query.toLowerCase();
+      return titleLower.contains(queryLower) || artistLower.contains(queryLower);
+    }).toList();
+
+    setState(() {
+      _filteredSongs = filtered;
+    });
   }
 
   Future<void> _toggleFavorite(AudioSong song) async {
@@ -84,6 +101,11 @@ class _FavouriteScreenState extends State<FavouriteScreen>
         // If toggling to unfavorite, remove from list
         if (_favoriteSongs[index].isFavorite) {
           _favoriteSongs.removeAt(index);
+          // Also update filtered list
+          final filteredIndex = _filteredSongs.indexWhere((s) => s.id == song.id);
+          if (filteredIndex != -1) {
+            _filteredSongs.removeAt(filteredIndex);
+          }
         } else {
           // Update the song state
           _favoriteSongs[index] = _favoriteSongs[index].copyWith(
@@ -161,7 +183,7 @@ class _FavouriteScreenState extends State<FavouriteScreen>
           child: Container(
             width: 350.w,
             height: 52.h,
-            padding: EdgeInsets.all(16.w),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(99.r),
@@ -181,11 +203,50 @@ class _FavouriteScreenState extends State<FavouriteScreen>
                     BlendMode.srcIn,
                   ),
                 ),
-                SizedBox(width: 6.w),
-                VTextSmall(
-                  text: 'Search by song',
-                  fontWeight: FontWeight.w400,
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    cursorColor: Color(0xFF644FF0),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w400,
+                      decoration: TextDecoration.none,
+                      decorationThickness: 0,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search by song',
+                      hintStyle: TextStyle(
+                        color: Color(0xFF696C8D),
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: (value) {
+                      _filterSongs(value);
+                    },
+                  ),
                 ),
+                if (_searchController.text.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      _searchController.clear();
+                      _filterSongs('');
+                    },
+                    child: Icon(
+                      Icons.clear,
+                      color: Colors.white.withValues(alpha: 0.5),
+                      size: 20.sp,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -201,24 +262,30 @@ class _FavouriteScreenState extends State<FavouriteScreen>
                     color: Colors.white,
                   ),
                 )
-              : _favoriteSongs.isEmpty
+              : _filteredSongs.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.favorite_border,
+                            _searchController.text.isEmpty
+                                ? Icons.favorite_border
+                                : Icons.search_off,
                             size: 80.sp,
                             color: Colors.white.withValues(alpha: 0.5),
                           ),
                           SizedBox(height: 20.h),
                           VTextSmall(
-                            text: 'No favorite songs yet',
+                            text: _searchController.text.isEmpty
+                                ? 'No favorite songs yet'
+                                : 'No songs found',
                             fontWeight: FontWeight.w500,
                           ),
                           SizedBox(height: 10.h),
                           VTextSmall(
-                            text: 'Add songs to favorites to see them here',
+                            text: _searchController.text.isEmpty
+                                ? 'Add songs to favorites to see them here'
+                                : 'Try searching with different keywords',
                             fontWeight: FontWeight.w400,
                           ),
                         ],
@@ -226,9 +293,12 @@ class _FavouriteScreenState extends State<FavouriteScreen>
                     )
                   : ListView.builder(
                       padding: EdgeInsets.symmetric(horizontal: 20.w),
-                      itemCount: _favoriteSongs.length,
+                      itemCount: _filteredSongs.length,
                       itemBuilder: (context, index) {
-                        final song = _favoriteSongs[index];
+                        final song = _filteredSongs[index];
+                        // Find the index of this song in the full playlist
+                        final fullPlaylistIndex = _favoriteSongs.indexWhere((s) => s.id == song.id);
+
                         return SongCard(
                           title: song.title,
                           artist: song.artist,
@@ -236,14 +306,14 @@ class _FavouriteScreenState extends State<FavouriteScreen>
                           image: song.filePath,
                           isFavorite: song.isFavorite,
                           onTap: () {
-                            // Pass the entire playlist with current index
+                            // Pass the entire full playlist with correct index
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => LyricsScreen(
                                   song: song,
                                   playlist: _favoriteSongs,
-                                  initialIndex: index,
+                                  initialIndex: fullPlaylistIndex >= 0 ? fullPlaylistIndex : index,
                                 ),
                               ),
                             );

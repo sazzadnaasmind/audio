@@ -6,8 +6,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:volum/app/vtext.dart';
 import '../../../../app/resourse.dart';
 import '../../../../core/model/audio_song.dart';
-import '../../../../core/model/lyric_line.dart';
-import '../../../../core/service/lyrics_service.dart';
 import '../../../../core/service/recent_songs_service.dart';
 
 class LyricsScreen extends StatefulWidget {
@@ -27,17 +25,10 @@ class LyricsScreen extends StatefulWidget {
 }
 
 class _LyricsScreenState extends State<LyricsScreen> {
-  bool _showTranslationMenu = false;
-  String _selectedLanguage = 'English';
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
-  int _currentLyricIndex = -1;
-  final ScrollController _scrollController = ScrollController();
-  List<String> _availableLanguages = ['English'];
-  List<LyricLine> _lyrics = [];
-  bool _isLoadingLyrics = true;
 
   // Playlist management
   List<AudioSong> _playlist = [];
@@ -49,27 +40,10 @@ class _LyricsScreenState extends State<LyricsScreen> {
   bool _isShuffleMode = false;
   List<int> _shuffledIndices = [];
 
-  final List<String> _languages = [
-    'English',
-    'Bangla',
-    'Chinese',
-    'French',
-    'Arabic',
-    'Urdu',
-    'Japanese',
-    'Korean',
-    'Portuguese',
-    'German',
-    'Spanish',
-    'Italian',
-    'Russian',
-  ];
-
   @override
   void initState() {
     super.initState();
     _initializePlaylist();
-    _loadLyrics();
     _initAudioPlayer();
     _addToRecentSongs();
   }
@@ -95,56 +69,6 @@ class _LyricsScreenState extends State<LyricsScreen> {
     }
   }
 
-  Future<void> _loadLyrics() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoadingLyrics = true;
-    });
-
-    try {
-      if (_currentSong?.lyrics != null && _currentSong!.lyrics!.isNotEmpty) {
-        _lyrics = _currentSong!.lyrics!;
-      } else if (_currentSong != null) {
-        final fetchedLyrics = await LyricsService.fetchLyrics(_currentSong!);
-        if (fetchedLyrics != null && fetchedLyrics.isNotEmpty) {
-          _lyrics = fetchedLyrics;
-
-          // Save fetched lyrics to local .lrc file for future use
-          LyricsService.saveLyricsToFile(_currentSong!.filePath, fetchedLyrics);
-        }
-      }
-
-      _detectAvailableLanguages();
-    } catch (e) {
-      print('Error loading lyrics: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingLyrics = false;
-        });
-      }
-    }
-  }
-
-  void _detectAvailableLanguages() {
-    if (_lyrics.isNotEmpty) {
-      Set<String> languages = {'English'};
-      for (var line in _lyrics) {
-        languages.addAll(line.translations.keys);
-      }
-      _availableLanguages = languages.toList();
-
-      if (_availableLanguages.length > 1) {
-        for (var lang in _availableLanguages) {
-          if (lang != 'English') {
-            _selectedLanguage = lang;
-            break;
-          }
-        }
-      }
-    }
-  }
-
   void _initAudioPlayer() {
     if (_currentSong != null) {
       _audioPlayer.setSourceDeviceFile(_currentSong!.filePath);
@@ -159,7 +83,6 @@ class _LyricsScreenState extends State<LyricsScreen> {
         if (mounted) {
           setState(() {
             _position = position;
-            _updateCurrentLyric();
           });
         }
       });
@@ -180,27 +103,54 @@ class _LyricsScreenState extends State<LyricsScreen> {
     }
   }
 
-  void _onSongComplete() {
+  Future<void> _onSongComplete() async {
     if (_isRepeatMode) {
       // Repeat current song
-      _audioPlayer.seek(Duration.zero);
-      _audioPlayer.resume();
+      try {
+        await _audioPlayer.seek(Duration.zero);
+        await _audioPlayer.resume();
+      } catch (e) {
+        print('Error repeating song: $e');
+        // If seek fails, reload the source
+        if (_currentSong != null) {
+          await _audioPlayer.setSourceDeviceFile(_currentSong!.filePath);
+          await _audioPlayer.resume();
+        }
+      }
+    } else if (_playlist.length == 1) {
+      // If only one song and repeat is off, loop it anyway
+      try {
+        await _audioPlayer.seek(Duration.zero);
+        await _audioPlayer.resume();
+      } catch (e) {
+        print('Error looping song: $e');
+        if (_currentSong != null) {
+          await _audioPlayer.setSourceDeviceFile(_currentSong!.filePath);
+          await _audioPlayer.resume();
+        }
+      }
     } else {
-      // Play next song
-      _playNext();
+      // Play next song in playlist
+      await _playNext();
     }
   }
 
   void _toggleRepeat() {
     setState(() {
       _isRepeatMode = !_isRepeatMode;
+      // If repeat is enabled, disable shuffle
+      if (_isRepeatMode) {
+        _isShuffleMode = false;
+      }
     });
   }
 
   void _toggleShuffle() {
     setState(() {
       _isShuffleMode = !_isShuffleMode;
+      // If shuffle is enabled, disable repeat
       if (_isShuffleMode) {
+        _isRepeatMode = false;
         // Create shuffled indices
         _shuffledIndices = List.generate(_playlist.length, (index) => index);
         _shuffledIndices.shuffle();
@@ -211,11 +161,14 @@ class _LyricsScreenState extends State<LyricsScreen> {
           _shuffledIndices.removeAt(currentIndexInShuffle);
           _shuffledIndices.insert(0, _currentSongIndex);
         }
+      } else {
+        // Reset shuffled indices to normal order when shuffle is disabled
+        _shuffledIndices = List.generate(_playlist.length, (index) => index);
       }
     });
   }
 
-  void _playPrevious() async {
+  Future<void> _playPrevious() async {
     if (_playlist.isEmpty) return;
 
     int previousIndex;
@@ -239,7 +192,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
     await _changeSong(previousIndex);
   }
 
-  void _playNext() async {
+  Future<void> _playNext() async {
     if (_playlist.isEmpty) return;
 
     int nextIndex;
@@ -269,48 +222,13 @@ class _LyricsScreenState extends State<LyricsScreen> {
     setState(() {
       _currentSongIndex = newIndex;
       _currentSong = _playlist[_currentSongIndex];
-      _currentLyricIndex = -1;
       _position = Duration.zero;
       _duration = Duration.zero;
     });
 
     await _addToRecentSongs();
-    await _loadLyrics();
     await _audioPlayer.setSourceDeviceFile(_currentSong!.filePath);
     await _audioPlayer.resume();
-  }
-
-  void _updateCurrentLyric() {
-    if (_lyrics.isEmpty || !mounted) return;
-
-    int currentSeconds = _position.inSeconds;
-    int newIndex = -1;
-
-    for (int i = 0; i < _lyrics.length; i++) {
-      if (currentSeconds >= _lyrics[i].timestamp) {
-        newIndex = i;
-      } else {
-        break;
-      }
-    }
-
-    if (newIndex != _currentLyricIndex) {
-      setState(() {
-        _currentLyricIndex = newIndex;
-      });
-      _scrollToCurrentLyric();
-    }
-  }
-
-  void _scrollToCurrentLyric() {
-    if (_currentLyricIndex >= 0 && _scrollController.hasClients) {
-      double targetPosition = _currentLyricIndex * 120.h;
-      _scrollController.animateTo(
-        targetPosition,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
   }
 
   Future<void> _togglePlayPause() async {
@@ -332,7 +250,6 @@ class _LyricsScreenState extends State<LyricsScreen> {
   void dispose() {
     _audioPlayer.stop();
     _audioPlayer.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -395,7 +312,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         VText(
-                          text: 'Lyrics',
+                          text: 'Now Playing',
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w500,
                         ),
@@ -454,137 +371,21 @@ class _LyricsScreenState extends State<LyricsScreen> {
                             ),
                           ),
                           VTextSmall(text: songDuration),
-                          SizedBox(width: 12.w),
-                          GestureDetector(
-                            onTap: () => setState(() => _showTranslationMenu = !_showTranslationMenu),
-                            child: Icon(Icons.more_vert, color: Colors.white, size: 20.sp),
-                          ),
                         ],
                       ),
                     ),
                   ),
                   SizedBox(height: 30.h),
-                  Expanded(
-                    child: _isLoadingLyrics
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                CircularProgressIndicator(color: Colors.white),
-                                SizedBox(height: 16.h),
-                                VText(text: 'Loading lyrics...', color: Colors.white, fontSize: 14.sp),
-                              ],
-                            ),
-                          )
-                        : _lyrics.isEmpty
-                            ? Center(child: VText(text: 'No lyrics available for this song', color: R.color.grayPurple, fontSize: 16.sp))
-                            : SingleChildScrollView(
-                                controller: _scrollController,
-                                padding: EdgeInsets.symmetric(horizontal: 24.w),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ...List.generate(_lyrics.length, (index) {
-                                      return Padding(
-                                        padding: EdgeInsets.only(bottom: 30.h),
-                                        child: _buildLyricBlock(_lyrics[index], index),
-                                      );
-                                    }),
-                                    SizedBox(height: 120.h),
-                                  ],
-                                ),
-                              ),
-                  ),
+                  Spacer(),
                 ],
               ),
             ),
-            if (_showTranslationMenu)
-              Positioned(
-                top: 71.h,
-                left: 0,
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    width: 240.w,
-                    height: 633.h,
-                    decoration: BoxDecoration(color: Color(0xFF171616)),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                          decoration: BoxDecoration(
-                            border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1)),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.expand_more, color: Colors.white, size: 20.sp),
-                              SizedBox(width: 8.w),
-                              Text(
-                                'Translate to: $_selectedLanguage',
-                                style: TextStyle(color: Colors.white, fontSize: 14.sp, fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: _languages.map((language) {
-                                bool isSelected = language == _selectedLanguage;
-                                bool isAvailable = _availableLanguages.contains(language);
-                                return InkWell(
-                                  onTap: isAvailable
-                                      ? () => setState(() {
-                                            _selectedLanguage = language;
-                                            _showTranslationMenu = false;
-                                          })
-                                      : null,
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-                                    decoration: BoxDecoration(
-                                      border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 0.5)),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          language,
-                                          style: TextStyle(
-                                            color: !isAvailable
-                                                ? Colors.white.withValues(alpha: 0.3)
-                                                : isSelected
-                                                    ? Colors.white
-                                                    : Colors.white.withValues(alpha: 0.5),
-                                            fontSize: 15.sp,
-                                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Color(0xFF1E1B4B).withValues(alpha: 0.9)],
-                  ),
-                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -631,24 +432,6 @@ class _LyricsScreenState extends State<LyricsScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildLyricBlock(LyricLine lyricLine, int index) {
-    bool isCurrentLine = index == _currentLyricIndex;
-    Color textColor = isCurrentLine ? Colors.white : R.color.grayPurple;
-    String primaryText = lyricLine.english;
-    String secondaryText = _selectedLanguage != 'English' ? lyricLine.getTranslation(_selectedLanguage) : '';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        VText(text: primaryText, color: textColor, fontSize: 16.sp, fontWeight: FontWeight.w500),
-        if (secondaryText.isNotEmpty && _selectedLanguage != 'English') ...[
-          SizedBox(height: 12.h),
-          VText(text: secondaryText, color: textColor, fontSize: 16.sp, fontWeight: FontWeight.w500),
-        ],
-      ],
     );
   }
 }

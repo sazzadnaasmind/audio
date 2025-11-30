@@ -5,6 +5,7 @@ import 'package:volum/feature/storage/UI/widget/folder_card.dart';
 import 'package:volum/app/vtext.dart';
 import 'package:get/get.dart';
 import '../../../../app/resourse.dart';
+import '../../../../core/Ads/reward_ads.dart';
 import '../../../../core/service/audio_storage_service.dart';
 import 'folder_songs_screen.dart';
 class StorageScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class StorageScreen extends StatefulWidget {
 
 class _StorageScreenState extends State<StorageScreen> {
   final AudioStorageService _audioService = AudioStorageService();
+  final RewardedAdManager _rewardedAdManager = RewardedAdManager();
 
   List<Map<String, String>> folders = [
     {'name': 'Music', 'songs': '0 Songs'},
@@ -30,6 +32,43 @@ class _StorageScreenState extends State<StorageScreen> {
   void initState() {
     super.initState();
     _updateAllFolderCounts();
+    _loadRewardedAd();
+  }
+
+  Future<void> _loadRewardedAd() async {
+    await _rewardedAdManager.loadRewardedAd(
+      onAdLoaded: () {
+        // Ad loaded successfully
+      },
+      onAdFailedToLoad: (error) {
+        // Ad failed to load
+      },
+    );
+  }
+
+  Future<void> _onFolderTap(String folderName) async {
+    if (_rewardedAdManager.isAdReady) {
+      // Show rewarded ad first
+      await _rewardedAdManager.showRewardedAd(
+        onUserEarnedReward: (amount, type) {
+          // User earned reward, navigate to folder
+          _navigateToFolder(folderName);
+        },
+      );
+    } else {
+      // Ad not ready, navigate directly
+      _navigateToFolder(folderName);
+      // Try to load ad for next time
+      _loadRewardedAd();
+    }
+  }
+
+  void _navigateToFolder(String folderName) {
+    Get.to(() => FolderSongsScreen(
+      folderName: folderName,
+    ))?.then((_) {
+      _updateAllFolderCounts();
+    });
   }
 
   Future<void> _updateAllFolderCounts() async {
@@ -53,6 +92,12 @@ class _StorageScreenState extends State<StorageScreen> {
         {'name': 'Recorded', 'songs': '${recordedSongs.length} Songs'},
       ];
     });
+  }
+
+  @override
+  void dispose() {
+    _rewardedAdManager.dispose();
+    super.dispose();
   }
 
   Future<void> _uploadAudioFile() async {
@@ -156,13 +201,7 @@ class _StorageScreenState extends State<StorageScreen> {
                         return FolderCard(
                           folderName: folder['name']!,
                           songCount: folder['songs']!,
-                          onTap: () {
-                            Get.to(() => FolderSongsScreen(
-                              folderName: folder['name']!,
-                            ))?.then((_) {
-                              _updateAllFolderCounts();
-                            });
-                          },
+                          onTap: () => _onFolderTap(folder['name']!),
                         );
                       },
                     ),

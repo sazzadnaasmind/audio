@@ -1,5 +1,4 @@
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -7,7 +6,7 @@ import 'package:applovin_max/applovin_max.dart';
 import 'package:flutter/cupertino.dart';
 import 'app.dart';
 import 'core/Ads/ads_config.dart';
-import 'package:device_preview/device_preview.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

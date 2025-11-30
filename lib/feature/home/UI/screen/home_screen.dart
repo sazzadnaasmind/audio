@@ -4,11 +4,13 @@ import 'package:get/get.dart';
 import 'package:volum/app/vtestsmall.dart';
 import 'dart:ui';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:volum/feature/home/UI/widget/tab_item.dart';
 import 'package:volum/feature/home/UI/widget/song_card.dart';
 import 'package:volum/feature/storage/UI/screen/storage_screen.dart';
 import 'package:volum/feature/favourite/UI/screen/favourite_screen.dart';
 import '../../../../app/resourse.dart';
+import '../../../../core/Ads/banner_ads.dart';
 import '../../../../core/model/audio_song.dart';
 import '../../../../core/service/recent_songs_service.dart';
 import '../../../lyrics/UI/screen/lyrics_screen.dart';
@@ -26,17 +28,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<AudioSong> _filteredSongs = [];
   bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
+  final BannerAdManager _bannerAdManager = BannerAdManager();
+  bool _isBannerAdLoaded = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadRecentSongs();
+    _loadBannerAd();
+  }
+
+  Future<void> _loadBannerAd() async {
+    await _bannerAdManager.loadBannerAd(
+      onAdLoaded: () {
+        if (mounted) {
+          setState(() {
+            _isBannerAdLoaded = true;
+          });
+        }
+      },
+      onAdFailedToLoad: (error) {
+        if (mounted) {
+          setState(() {
+            _isBannerAdLoaded = false;
+          });
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _bannerAdManager.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -131,6 +156,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             SafeArea(
               child: Column(
                 children: [
+                  // Banner Ad at the top
+                  if (_isBannerAdLoaded && _bannerAdManager.bannerAd != null)
+                    Container(
+                      alignment: Alignment.center,
+                      width: _bannerAdManager.bannerAd!.size.width.toDouble(),
+                      height: _bannerAdManager.bannerAd!.size.height.toDouble(),
+                      child: AdWidget(ad: _bannerAdManager.bannerAd!),
+                    ),
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: 20.w,
